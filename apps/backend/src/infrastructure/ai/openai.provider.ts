@@ -68,6 +68,7 @@ export class OpenAIProvider implements IAiProvider {
 - Độ khó: ${input.difficulty || 'MEDIUM'}
 - Ngôn ngữ: ${input.language || 'PYTHON'}
 - Số test cases: ${input.testCaseCount || 5}
+- YÊU CẦU ĐẶC BIỆT: Đề bài phải nêu rõ tên hàm chuẩn (như def solve) và quy tắc xử lý khi vi phạm quy định (như trả về -1 hoặc INVALID). Bộ test cases phải có cả test thông thường và test kiểm tra biên/vi phạm quy định đề bài (thêm trường explanation).
 ${input.additionalRequirements ? `- Yêu cầu: ${input.additionalRequirements}` : ''}
 ${input.materialContent ? `- NỘI DUNG TÀI LIỆU / SLIDE BÀI GIẢNG ĐÍNH KÈM:
 """

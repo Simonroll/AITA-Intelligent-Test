@@ -1,83 +1,34 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { apiRequest } from '../../api/client';
-import { useAuth } from '../../contexts/AuthContext';
+import React from 'react';
 import { GoogleSignIn } from '../../components/GoogleSignIn';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const cleanEmail = email.trim();
-    const cleanPassword = password.trim();
-
-    const res = await apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
-    });
-
-    setLoading(false);
-    if (res.success && res.data) {
-      login(res.data.token, res.data.user);
-      if (res.data.user.role !== 'STUDENT') {
-        navigate('/lecturer');
-      } else {
-        navigate('/student');
-      }
-    } else {
-      setError(res.message || 'Đăng nhập thất bại');
-    }
-  };
-
   return (
-    <div style={{ maxWidth: '420px', margin: '4rem auto' }}>
-      <div className="card">
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Đăng nhập AITA</h2>
-        {error && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              className="form-control"
-              placeholder="ten@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Mật khẩu</label>
-            <input
-              type="password"
-              className="form-control"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
-            {loading ? 'Đang xác thực...' : 'Đăng nhập'}
-          </button>
-        </form>
-        <GoogleSignIn password={password} />
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.875rem', color: '#94a3b8' }}>
-          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+    <div style={{ maxWidth: '440px', margin: '4rem auto', padding: '0 1rem' }}>
+      <div className="card" style={{ padding: '2.25rem 2rem', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(56, 189, 248, 0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h2 style={{ marginBottom: '0.5rem', fontWeight: 700 }}>Đăng nhập AITA</h2>
+        <p style={{ color: 'var(--text-muted, #94a3b8)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+          Hệ thống Đánh giá & Chấm mã nguồn Tự động
         </p>
+
+        <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '0.75rem', padding: '1.25rem', marginBottom: '1.75rem', textAlign: 'left' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.1rem' }}>💡</span>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #cbd5e1)', lineHeight: 1.5 }}>
+              <strong>Xác thực tập trung Google SSO:</strong> Toàn bộ tài khoản Giảng viên và Sinh viên đăng nhập trực tiếp bằng tài khoản Google trường hoặc email đã được cấp trên hệ thống.
+            </div>
+          </div>
+        </div>
+
+        <GoogleSignIn />
+
+        <div style={{ marginTop: '2rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border, rgba(255,255,255,0.1))', fontSize: '0.8rem', color: '#64748b' }}>
+          Hệ thống quản lý tài khoản nội bộ và không mở đăng ký tự do. Nếu tài khoản chưa có trong hệ thống, vui lòng liên hệ Giảng viên bộ môn hoặc Quản trị viên để được cấp quyền.
+        </div>
       </div>
     </div>
   );

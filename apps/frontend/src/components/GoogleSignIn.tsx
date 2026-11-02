@@ -24,10 +24,8 @@ function loadGoogle() {
   });
   return googleScript;
 }
-export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
+export const GoogleSignIn: React.FC<{ password?: string }> = () => {
   const container = useRef<HTMLDivElement>(null);
-  const passwordRef = useRef(password);
-  passwordRef.current = password;
   const [message, setMessage] = useState('');
   const [retry, setRetry] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -39,7 +37,7 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
       const config = await apiRequest<{ clientId: string | null; nonce: string | null }>('/auth/google/config');
       if (!active) return;
       if (!config.success || !config.data?.clientId || !config.data.nonce) {
-        setMessage(config.message || 'Đăng nhập Google chưa được bật.'); return;
+        setMessage(config.message || 'Đăng nhập Google chưa được cấu hình Client ID.'); return;
       }
       try {
         await loadGoogle();
@@ -49,7 +47,7 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
           callback: async response => {
             if (!active) return;
             setBusy(true); setMessage('');
-            const result = await apiRequest('/auth/google', { method: 'POST', body: JSON.stringify({ credential: response.credential, password: passwordRef.current || undefined }) });
+            const result = await apiRequest('/auth/google', { method: 'POST', body: JSON.stringify({ credential: response.credential }) });
             if (!active) return;
             setBusy(false);
             if (result.success && result.data) {
@@ -64,9 +62,9 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
     })();
     return () => { active = false; };
   }, [retry, login, navigate]);
-  return <div style={{ marginTop: '1rem' }}>
+  return <div style={{ marginTop: '1rem', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
     <div ref={container} style={{ display: busy ? 'none' : 'flex', justifyContent: 'center' }} />
-    {busy && <p>Đang xác thực Google...</p>}
-    {message && <p role="status" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{message}</p>}
+    {busy && <p style={{ color: 'var(--primary, #38bdf8)', fontSize: '0.9rem' }}>Đang xác thực Google...</p>}
+    {message && <div role="status" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', marginTop: '0.75rem', fontSize: '0.85rem', textAlign: 'center', width: '100%' }}>{message}</div>}
   </div>;
 };

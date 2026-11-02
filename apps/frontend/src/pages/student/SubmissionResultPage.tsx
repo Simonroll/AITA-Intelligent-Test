@@ -348,7 +348,7 @@ export const SubmissionResultPage: React.FC = () => {
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                       <code>{f.path}</code>
                       <span style={{ color: f.status === 'MATCHED' ? '#34d399' : f.status === 'MODIFIED' ? '#fbbf24' : '#f87171' }}>
-                        {f.status === 'MATCHED' ? '✓ Khớp 100%' : f.status === 'MODIFIED' ? '✎ Đã sửa đổi' : '✗ Không có trên repo'}
+                        {f.status === 'MATCHED' ? 'Khớp 100%' : f.status === 'MODIFIED' ? 'Đã sửa đổi' : 'Không có trên repo'}
                       </span>
                     </div>
                   ))}

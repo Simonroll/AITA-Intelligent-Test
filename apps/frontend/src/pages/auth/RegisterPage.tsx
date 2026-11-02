@@ -1,87 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { apiRequest } from '../../api/client';
-import { useAuth } from '../../contexts/AuthContext';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const RegisterPage: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const res = await apiRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, fullName, password }),
-    });
-
-    setLoading(false);
-    if (res.success && res.data) {
-      login(res.data.token, res.data.user);
-      navigate('/student');
-    } else {
-      setError(res.message || 'Đăng ký thất bại');
-    }
-  };
-
   return (
-    <div style={{ maxWidth: '420px', margin: '3rem auto' }}>
-      <div className="card">
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Tạo tài khoản AITA</h2>
-        {error && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Họ và tên</label>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Nguyễn Văn A"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              className="form-control"
-              placeholder="ten@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Mật khẩu</label>
-            <input
-              type="password"
-              className="form-control"
-              placeholder="Tối thiểu 8 ký tự"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Tài khoản tự đăng ký dành cho sinh viên. Tài khoản giảng viên do quản trị viên cấp.</p>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
-            {loading ? 'Đang tạo...' : 'Đăng ký'}
-          </button>
-        </form>
-        <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.875rem', color: '#94a3b8' }}>
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+    <div style={{ maxWidth: '460px', margin: '4rem auto', padding: '0 1rem' }}>
+      <div className="card" style={{ padding: '2.5rem 2rem', textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </div>
+        <h2 style={{ marginBottom: '0.75rem', fontWeight: 700 }}>Tính năng đăng ký đã đóng</h2>
+        <p style={{ color: 'var(--text-muted, #94a3b8)', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+          Hệ thống AITA quản lý người dùng theo danh sách lớp học và tài khoản được cấp phép bởi Quản trị viên và Giảng viên. Tính năng tự đăng ký mở hiện không còn khả dụng.
         </p>
+
+        <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border, rgba(255,255,255,0.1))', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.75rem', fontSize: '0.85rem', color: '#cbd5e1', textAlign: 'left' }}>
+          <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600 }}>Hướng dẫn tiếp cận:</p>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: 1.5 }}>
+            <li><strong>Sinh viên:</strong> Được tự động thêm vào hệ thống khi Giảng viên import danh sách lớp học. Đăng nhập trực tiếp bằng Google email trường (@fpt.edu.vn / @fe.edu.vn).</li>
+            <li><strong>Giảng viên:</strong> Được cấp tài khoản bởi Quản trị viên hệ thống.</li>
+          </ul>
+        </div>
+
+        <Link to="/login" className="btn btn-primary" style={{ display: 'inline-block', width: '100%', textDecoration: 'none' }}>
+          Đến trang Đăng nhập Google
+        </Link>
       </div>
     </div>
   );

@@ -633,6 +633,15 @@ export const CreateExamPage: React.FC = () => {
 
           <hr style={{ borderColor: 'var(--border)', margin: '1.5rem 0' }} />
 
+          <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#fde68a' }}>
+            <strong>💡 Hướng dẫn cấu hình test case:</strong>
+            <ul style={{ margin: '0.3rem 0 0', paddingLeft: '1.25rem', lineHeight: 1.5 }}>
+              <li><strong>Test chức năng (Happy path):</strong> Đánh giá logic thuật toán trong điều kiện dữ liệu hợp lệ.</li>
+              <li><strong>Test vi phạm quy định đề bài & Biên:</strong> Kiểm tra việc xử lý ngoại lệ theo đúng đặc tả đề bài (ví dụ: in <code>-1</code> hoặc <code>INVALID</code> khi input rỗng/âm/không tìm thấy).</li>
+              <li><strong>Quy định phi thuật toán (Tên hàm, Naming, Banned libs):</strong> Hệ thống AI Review sẽ tự động quét mã nguồn và trừ điểm nếu đặt sai tên hàm hoặc vi phạm quy định đề bài.</li>
+            </ul>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
               <h4 style={{ margin: 0 }}>Bộ test case chấm điểm tự động</h4>

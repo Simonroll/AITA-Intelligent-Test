@@ -79,7 +79,16 @@ export const EditExamPage: React.FC = () => {
           <div className="form-group"><label>Bắt đầu</label><input className="form-control" type="datetime-local" value={form.startTime} onChange={e => setForm({ ...form, startTime: e.target.value })} /></div>
           <div className="form-group"><label>Kết thúc</label><input className="form-control" type="datetime-local" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} /></div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 0' }}><h3>Test case</h3><button type="button" className="btn btn-secondary" disabled={hasSubmissions} onClick={() => setCases([...cases, { inputData: '', expectedOutput: '', isHidden: false, scoreWeight: 1, orderIndex: Math.max(0, ...cases.map(item => item.orderIndex)) + 1 }])}>+ Thêm test case</button></div>
+        <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '0.5rem', padding: '0.75rem 1rem', margin: '1.25rem 0', fontSize: '0.85rem', color: '#fde68a' }}>
+          <strong>💡 Lưu ý test case:</strong> Nên bao gồm cả test case chức năng và test case kiểm tra vi phạm quy định đề bài (input âm/rỗng, trả về mã quy định như -1 hoặc INVALID). Lỗi sai tên hàm sẽ được AI Semantic Review tự động phát hiện.
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem 0' }}>
+          <h3>Test case</h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="button" className="btn btn-secondary" disabled={hasSubmissions} onClick={() => setCases([...cases, { inputData: '', expectedOutput: '', isHidden: false, scoreWeight: 1, orderIndex: Math.max(0, ...cases.map(item => item.orderIndex)) + 1 }])}>+ Thêm test case</button>
+            <button type="button" className="btn btn-secondary" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fbbf24' }} disabled={hasSubmissions} onClick={() => setCases([...cases, { inputData: '-1\n0', expectedOutput: 'INVALID', isHidden: true, scoreWeight: 1.5, orderIndex: Math.max(0, ...cases.map(item => item.orderIndex)) + 1 }])}>+ Thêm test vi phạm quy định</button>
+          </div>
+        </div>
         {hasSubmissions && <p role="note" style={{ color: '#fbbf24', marginBottom: '1rem' }}>Đề đã có bài nộp: có thể sửa cấu hình đề, nhưng bộ test bị khóa để bảo toàn kết quả chấm hiện có.</p>}
         {cases.map((item, index) => <div className="card" key={item.id || `new-${index}`} style={{ marginBottom: '0.75rem' }}>
           <div className="form-group"><label>Dữ liệu đầu vào</label><textarea className="form-control" disabled={hasSubmissions} value={item.inputData} onChange={e => updateCase(index, 'inputData', e.target.value)} /></div>

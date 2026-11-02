@@ -124,6 +124,28 @@ export class IntelligentLocalProvider implements IAiProvider {
 
     if (badVarCount > 0) deductions += Math.min(2.0, badVarCount * 0.5);
 
+    // Specification compliance: check required function name from exam description
+    if (input.examDescription) {
+      const funcMatch = input.examDescription.match(/(?:hàm|phương thức|function|def)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?/i);
+      if (funcMatch && funcMatch[1]) {
+        const requiredFunc = funcMatch[1];
+        const ignored = ['main', 'print', 'input', 'Scanner', 'System', 'Console'];
+        if (!ignored.includes(requiredFunc)) {
+          const hasRequiredFunc = new RegExp(`\\b${requiredFunc}\\s*\\(`, 'i').test(combinedCode);
+          if (!hasRequiredFunc) {
+            deductions += 1.5;
+            codeSmells.push({
+              smell: `Vi phạm quy định đề bài: Không tìm thấy hàm '${requiredFunc}' theo yêu cầu của đề`,
+              recommendation: `Khai báo và đặt tên hàm chính xác là '${requiredFunc}(...)' theo đúng quy định đề bài`,
+            });
+            solidViolations.push(
+              `- **Vi phạm đặc tả đề bài**: Đề bài yêu cầu xây dựng hàm/phương thức \`${requiredFunc}\`, nhưng mã nguồn nộp chưa định nghĩa hoặc đặt sai tên hàm.`
+            );
+          }
+        }
+      }
+    }
+
     // 2. Analyze function length & cohesion
     let openBraceCount = 0;
     let maxFunctionLines = 0;
