@@ -5,7 +5,9 @@ import { defaultJobQueue } from '../../infrastructure/queue/bullmq-job-queue';
 import { prisma } from '../../infrastructure/database/prisma';
 import { HttpError } from '../../shared/http';
 import { IJobQueue } from '../../infrastructure/queue/job-queue.interface';
-import { readZip, selectBundle, persistArchive } from '../../infrastructure/storage/submission-archive';
+import fs from 'fs/promises';
+import { readZip, selectBundle, persistArchive, loadBundle, archivePath } from '../../infrastructure/storage/submission-archive';
+import { autogradingService } from './autograding.service';
 
 import { normalizeRepoUrl, teamService } from '../teams/team.service';
 import { SubmissionStatus } from '../../domain/enums';
@@ -481,6 +483,70 @@ export class SubmissionService {
     }
     return (await this.submissionRepo.findLatestForStudent(examId, studentId))?.id;
   }
+  async regradeSubmission(submissionId: string, manualScore: number, lecturerFeedback: string | null, lecturerId: string) {
+    const submission = await this.getSubmission(submissionId);
+    const updated = await this.submissionRepo.updateManualGrade(submission.id, manualScore, lecturerFeedback, lecturerId);
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorId: lecturerId,
+          action: 'SUBMISSION_REGRADE',
+          entityType: 'SUBMISSION',
+          entityId: submission.id,
+          oldValue: String(submission.totalScore),
+          newValue: String(manualScore),
+          reason: lecturerFeedback || 'Giảng viên chấm lại bài thi',
+        },
+      });
+    } catch (auditErr: any) {
+      console.warn('[regradeSubmission] AuditLog error:', auditErr.message);
+    }
+    return updated;
+  }
+
+  async reRunSandbox(submissionId: string) {
+    const submission = await this.getSubmission(submissionId);
+    await this.submissionRepo.resetForSandbox(submission.id);
+    try {
+      await this.queue.addJob('grading-queue', { submissionId: submission.id });
+    } catch (err: any) {
+      console.warn('[reRunSandbox] Queue fallback to direct autograding execution:', err.message);
+    }
+    // Always trigger direct autograding as well if queue is in-memory or fallback
+    void autogradingService.executeSubmission(submission.id);
+  }
+
+  async getSourceFilesContent(submission: any): Promise<Array<{ path: string; content: string }>> {
+    if (submission.artifactType === 'ZIP' && submission.sourceCodeUrl) {
+      try {
+        const bundle = await loadBundle(
+          submission.sourceCodeUrl,
+          submission.fileHashSha256,
+          submission.exam.allowedLanguage,
+          submission.entrypoint
+        );
+        return bundle.files.map(f => ({
+          path: f.path,
+          content: f.data.toString('utf-8'),
+        }));
+      } catch (err: any) {
+        try {
+          const bytes = await fs.readFile(archivePath(submission.sourceCodeUrl));
+          const unzipped = await readZip(bytes);
+          const ext = ({ PYTHON: '.py', CSHARP: '.cs', JAVA: '.java' } as Record<string, string>)[submission.exam.allowedLanguage];
+          const matched = ext ? unzipped.filter(f => f.path.endsWith(ext) && !f.path.includes('__MACOSX')) : unzipped;
+          return (matched.length ? matched : unzipped).map(f => ({
+            path: f.path,
+            content: f.data.toString('utf-8'),
+          }));
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  }
+
   async getSubmissionsByExam(examId: string, studentId?: string) { return this.submissionRepo.findByExamId(examId, studentId); }
 }
 export const submissionService = new SubmissionService();

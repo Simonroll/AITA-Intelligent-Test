@@ -159,6 +159,36 @@ export class SubmissionRepository {
     });
   }
 
+  async updateManualGrade(
+    id: string,
+    manualScore: number,
+    lecturerFeedback: string | null,
+    gradedById: string
+  ) {
+    await prisma.$executeRawUnsafe(
+      'UPDATE "submissions" SET "manualScore" = $1, "lecturerFeedback" = $2, "gradedAt" = $3, "gradedById" = $4, "totalScore" = $1 WHERE id = $5',
+      manualScore,
+      lecturerFeedback || null,
+      new Date(),
+      gradedById,
+      id
+    );
+    return this.findById(id);
+  }
+
+  async resetForSandbox(id: string) {
+    return prisma.submission.update({
+      where: { id },
+      data: {
+        status: 'QUEUED',
+        totalScore: 0,
+        compileMessage: null,
+        startedAt: null,
+        completedAt: null,
+      },
+    });
+  }
+
   async saveTestResults(
     results: Array<{
       submissionId: string;

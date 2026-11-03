@@ -8,6 +8,7 @@ import { asyncRoute, HttpError } from '../../shared/http';
 import { archivePath, ZIP_LIMIT } from '../../infrastructure/storage/submission-archive';
 import { prisma } from '../../infrastructure/database/prisma';
 import { rblService } from '../rbl/rbl.service';
+import { aiModuleService } from '../ai/ai.service';
 
 export const submissionRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: ZIP_LIMIT, files: 1, fields: 10, fieldSize: 512, parts: 20 },
@@ -163,4 +164,52 @@ submissionRouter.post('/submissions/:id/ast-analyze', authenticateJwt, asyncRout
   const submission = await authorizedSubmission(req);
   await rblService.analyze(submission.id);
   res.json({ success: true, message: 'Đã hoàn tất phân tích AST cho bài nộp.' });
+}));
+
+submissionRouter.post('/submissions/:id/regrade', authenticateJwt, asyncRoute(async (req: AuthRequest, res) => {
+  if (req.user!.role !== 'LECTURER' && req.user!.role !== 'ADMIN') {
+    throw new HttpError(403, 'Chỉ giảng viên hoặc quản trị viên mới có quyền chấm lại bài nộp.');
+  }
+  const submission = await submissionService.getSubmission(String(req.params.id));
+  await classAccess(submission.exam.classId, req.user!, true);
+  const { manualScore, lecturerFeedback } = req.body || {};
+  const scoreNum = Number(manualScore);
+  if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+    throw new HttpError(400, 'Điểm chấm lại không hợp lệ (phải là số từ 0 đến 100).');
+  }
+  const updated = await submissionService.regradeSubmission(
+    submission.id,
+    Math.round(scoreNum * 100) / 100,
+    typeof lecturerFeedback === 'string' ? lecturerFeedback.trim() : null,
+    req.user!.userId
+  );
+  res.json({ success: true, message: 'Đã cập nhật điểm và nhận xét của giảng viên.', data: updated });
+}));
+
+submissionRouter.post('/submissions/:id/re-run-sandbox', authenticateJwt, asyncRoute(async (req: AuthRequest, res) => {
+  if (req.user!.role !== 'LECTURER' && req.user!.role !== 'ADMIN') {
+    throw new HttpError(403, 'Chỉ giảng viên hoặc quản trị viên mới có quyền chạy lại Sandbox.');
+  }
+  const submission = await submissionService.getSubmission(String(req.params.id));
+  await classAccess(submission.exam.classId, req.user!, true);
+  await submissionService.reRunSandbox(submission.id);
+  res.json({ success: true, message: 'Đã kích hoạt chấm lại trên Docker Sandbox container.' });
+}));
+
+submissionRouter.post('/submissions/:id/re-run-ai', authenticateJwt, asyncRoute(async (req: AuthRequest, res) => {
+  const submission = await submissionService.getSubmission(String(req.params.id));
+  if (req.user!.role === 'STUDENT' && submission.studentId !== req.user!.userId) {
+    throw new HttpError(403, 'Không có quyền yêu cầu AI review bài nộp này.');
+  }
+  if (req.user!.role !== 'STUDENT') {
+    await classAccess(submission.exam.classId, req.user!, true);
+  }
+  const result = await aiModuleService.reviewSubmission(submission.id);
+  res.json({ success: true, message: 'Đã hoàn tất AI Review lại.', data: result });
+}));
+
+submissionRouter.get('/submissions/:id/source-files', authenticateJwt, asyncRoute(async (req: AuthRequest, res) => {
+  const submission = await authorizedSubmission(req);
+  const files = await submissionService.getSourceFilesContent(submission);
+  res.json({ success: true, data: files });
 }));

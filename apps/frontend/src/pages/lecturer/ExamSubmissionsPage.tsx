@@ -681,9 +681,19 @@ export const ExamSubmissionsPage: React.FC = () => {
                           {sub.status === 'LATE' ? 'NỘP MUỘN (Chờ duyệt)' : sub.status}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 600, fontSize: '1.05rem', color: '#34d399' }}>
-                        {sub.totalScore} pts
-                      </td>
+                      <td style={{ fontWeight: 600, fontSize: '1.05rem' }}>
+                        {(sub as any).manualScore != null ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            <span style={{ color: '#60a5fa' }}>
+                              {(sub as any).manualScore} pts
+                              <span style={{ fontSize: '0.7rem', background: '#1e40af', color: '#93c5fd', borderRadius: '0.25rem', padding: '0 0.35rem', marginLeft: '0.35rem', fontWeight: 700 }}>GV chấm</span>
+                            </span>
+                            <span style={{ color: '#64748b', fontSize: '0.8rem', textDecoration: 'line-through' }}>{sub.totalScore} pts sandbox</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: '#34d399' }}>{sub.totalScore} pts</span>
+                        )}
+                       </td>
                       <td>
                         {sub.aiReviews?.[0] ? (
                           <span className={`badge ${sub.aiReviews[0].cleanCodeScore >= 8.5 ? 'badge-green' : sub.aiReviews[0].cleanCodeScore >= 7.0 ? 'badge-blue' : sub.aiReviews[0].cleanCodeScore >= 5.0 ? 'badge-yellow' : 'badge-red'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -697,9 +707,10 @@ export const ExamSubmissionsPage: React.FC = () => {
                       <td>{sub.astStatus}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <Link to={`/student/submissions/${sub.id}`} className="btn btn-secondary btn-sm">
-                            Xem chi tiết
-                          </Link>
+                           <Link to={`/student/submissions/${sub.id}`} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                             Review &amp; Chấm lại
+                           </Link>
                           {sub.status === 'LATE' && (
                             <button
                               className="btn btn-primary btn-sm"

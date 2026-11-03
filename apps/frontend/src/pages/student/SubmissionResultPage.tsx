@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { MarkdownPreview } from '../../components/MarkdownPreview';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('vi-VN', {
@@ -98,6 +99,60 @@ export const SubmissionResultPage: React.FC = () => {
       clearTimeout(timer);
     };
   }, [id, user]);
+
+  const handleSaveRegrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingRegrade(true);
+    setRegradeNotice(null);
+    const scoreNum = Number(editingScore);
+    if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+      setRegradeNotice({ type: 'error', text: 'Điểm số không hợp lệ (phải từ 0 đến 100).' });
+      setSavingRegrade(false);
+      return;
+    }
+
+    const res = await apiRequest('/submissions/' + id + '/regrade', {
+      method: 'POST',
+      body: JSON.stringify({
+        manualScore: scoreNum,
+        lecturerFeedback: editingFeedback.trim(),
+      }),
+    });
+    setSavingRegrade(false);
+    if (res.success) {
+      setRegradeNotice({ type: 'success', text: 'Cập nhật điểm và nhận xét của giảng viên thành công!' });
+      await loadSubmission();
+    } else {
+      setRegradeNotice({ type: 'error', text: res.message || 'Không thể cập nhật điểm.' });
+    }
+  };
+
+  const handleReRunSandbox = async () => {
+    setReRunningSandbox(true);
+    setShowConfirmSandbox(false);
+    setRegradeNotice(null);
+    const res = await apiRequest('/submissions/' + id + '/re-run-sandbox', { method: 'POST' });
+    setReRunningSandbox(false);
+    if (res.success) {
+      setRegradeNotice({ type: 'success', text: 'Đã kích hoạt chấm lại trên Docker Sandbox. Kết quả sẽ tự động cập nhật.' });
+      await loadSubmission();
+    } else {
+      setRegradeNotice({ type: 'error', text: res.message || 'Không thể kích hoạt chấm lại trên Sandbox.' });
+    }
+  };
+
+  const handleViewSourceFiles = async () => {
+    setShowSourceModal(true);
+    if (sourceFiles.length === 0) {
+      setLoadingFiles(true);
+      const res = await apiRequest<Array<{ path: string; content: string }>>('/submissions/' + id + '/source-files');
+      setLoadingFiles(false);
+      if (res.success && res.data) {
+        setSourceFiles(res.data);
+        setSelectedFileIndex(0);
+      }
+    }
+  };
 
   // Trigger on-demand AI Semantic Review
   const handleTriggerAiReview = async () => {
