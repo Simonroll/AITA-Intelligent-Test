@@ -7,7 +7,6 @@ import { HttpError } from '../../shared/http';
 import { IJobQueue } from '../../infrastructure/queue/job-queue.interface';
 import fs from 'fs/promises';
 import { readZip, selectBundle, persistArchive, loadBundle, archivePath } from '../../infrastructure/storage/submission-archive';
-import { autogradingService } from './autograding.service';
 
 import { normalizeRepoUrl, teamService } from '../teams/team.service';
 import { SubmissionStatus } from '../../domain/enums';
@@ -485,7 +484,11 @@ export class SubmissionService {
   }
   async regradeSubmission(submissionId: string, manualScore: number, lecturerFeedback: string | null, lecturerId: string) {
     const submission = await this.getSubmission(submissionId);
+    if (!['COMPLETED', 'COMPILE_ERROR', 'FAILED'].includes(submission.status)) {
+      throw new HttpError(409, 'Chỉ có thể chấm thủ công sau khi Sandbox đã hoàn tất.');
+    }
     const updated = await this.submissionRepo.updateManualGrade(submission.id, manualScore, lecturerFeedback, lecturerId);
+    if (!updated) throw new HttpError(409, 'Bài nộp đang được xử lý lại; hãy chờ Sandbox hoàn tất rồi chấm tiếp.');
     try {
       await prisma.auditLog.create({
         data: {
@@ -506,14 +509,24 @@ export class SubmissionService {
 
   async reRunSandbox(submissionId: string) {
     const submission = await this.getSubmission(submissionId);
-    await this.submissionRepo.resetForSandbox(submission.id);
-    try {
-      await this.queue.addJob('grading-queue', { submissionId: submission.id });
-    } catch (err: any) {
-      console.warn('[reRunSandbox] Queue fallback to direct autograding execution:', err.message);
+    if (submission.artifactType !== 'ZIP' || !submission.sourceCodeUrl) {
+      throw new HttpError(400, 'Chỉ có thể chạy lại Sandbox với bài nộp ZIP.');
     }
-    // Always trigger direct autograding as well if queue is in-memory or fallback
-    void autogradingService.executeSubmission(submission.id);
+    if (['QUEUED', 'RUNNING'].includes(submission.status)) {
+      throw new HttpError(409, 'Bài nộp đang được Sandbox xử lý.');
+    }
+    const reset = await this.submissionRepo.resetForSandbox(submission.id);
+    if (!reset) throw new HttpError(409, 'Bài nộp đã được chạy lại hoặc không ở trạng thái có thể chấm lại.');
+    try {
+      await this.queue.addJob('grading-queue', { submissionId: submission.id }, { jobId: `${submission.id}-rerun-${Date.now()}` });
+    } catch (err: any) {
+      await this.submissionRepo.updateStatus(submission.id, 'FAILED', {
+        completedAt: new Date(),
+        compileMessage: `Không thể đưa bài vào hàng đợi Sandbox: ${err.message}`.slice(0, 4000),
+      });
+      throw new HttpError(503, 'Không thể đưa bài vào hàng đợi Sandbox. Vui lòng thử lại.');
+    }
+    return this.getSubmission(submission.id);
   }
 
   async getSourceFilesContent(submission: any): Promise<Array<{ path: string; content: string }>> {

@@ -65,6 +65,21 @@ export class AuthService {
     }
     throw new HttpError(403, 'Phương thức đăng nhập bằng mật khẩu đã bị vô hiệu hóa. Vui lòng đăng nhập bằng tài khoản Google.');
   }
+  async demoLogin(accountInput: unknown) {
+    if (process.env.DEMO_LOGIN_ENABLED !== 'true' || process.env.NODE_ENV === 'production') throw new HttpError(404, 'Không tìm thấy.');
+    const accounts = {
+      admin: { email: 'admin.test@fpt.edu.vn', role: 'ADMIN' },
+      lecturer: { email: 'lecturer.test@fpt.edu.vn', role: 'LECTURER' },
+      student: { email: 'student.test@fpt.edu.vn', role: 'STUDENT' },
+    } as const;
+    if (typeof accountInput !== 'string' || !Object.hasOwn(accounts, accountInput)) throw new HttpError(400, 'Tài khoản demo không hợp lệ.');
+    const account = accounts[accountInput as keyof typeof accounts];
+    const user = await this.db.user.findUnique({ where: { email: account.email } });
+    if (!user || user.role !== account.role || !user.isApproved || !user.isActive) {
+      throw new HttpError(404, 'Không tìm thấy tài khoản demo. Hãy seed tài khoản local trước.');
+    }
+    return this.createSession(user);
+  }
   async googleLogin(credential: unknown, nonce: string, password?: unknown) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId) throw new HttpError(503, 'Đăng nhập Google chưa được bật.');

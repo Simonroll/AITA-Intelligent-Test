@@ -8,37 +8,38 @@ generator client {
 }
 
 model User {
-  id           String            @id @default(uuid())
-  email        String            @unique
-  passwordHash String?
-  fullName     String
-  role         String            @default("STUDENT") // ADMIN, LECTURER, STUDENT
-  avatarUrl    String?
-  googleSubject String?          @unique
-  isActive     Boolean           @default(true)
-  isApproved   Boolean           @default(true)
-  createdAt    DateTime          @default(now())
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  fullName      String
+  role          String   @default("STUDENT") // ADMIN, LECTURER, STUDENT
+  avatarUrl     String?
+  googleSubject String?  @unique
+  isActive      Boolean  @default(true)
+  isApproved    Boolean  @default(true)
+  createdAt     DateTime @default(now())
 
-  lecturedClasses Class[]        @relation("LecturerClasses")
-  enrollments     ClassEnrollment[]
-  submissions     Submission[]
-  sessions        AuthSession[]
-  teamMemberships TeamMember[]
-  studentAppeals  Appeal[]       @relation("StudentAppeals")
-  resolvedAppeals Appeal[]       @relation("ResolvedAppeals")
-  auditLogs       AuditLog[]
+  lecturedClasses           Class[]           @relation("LecturerClasses")
+  manuallyGradedSubmissions Submission[]      @relation("SubmissionGrader")
+  enrollments               ClassEnrollment[]
+  submissions               Submission[]
+  sessions                  AuthSession[]
+  teamMemberships           TeamMember[]
+  studentAppeals            Appeal[]          @relation("StudentAppeals")
+  resolvedAppeals           Appeal[]          @relation("ResolvedAppeals")
+  auditLogs                 AuditLog[]
 
   @@map("users")
 }
 
 model AuthSession {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   userId           String
-  refreshTokenHash String   @unique
-  createdAt        DateTime @default(now())
+  refreshTokenHash String    @unique
+  createdAt        DateTime  @default(now())
   expiresAt        DateTime
   revokedAt        DateTime?
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -46,12 +47,12 @@ model AuthSession {
 }
 
 model Class {
-  id          String            @id @default(uuid())
-  classCode   String            @unique
-  name        String
-  lecturerId  String
-  semester    String
-  createdAt   DateTime          @default(now())
+  id         String   @id @default(uuid())
+  classCode  String   @unique
+  name       String
+  lecturerId String
+  semester   String
+  createdAt  DateTime @default(now())
 
   lecturer    User              @relation("LecturerClasses", fields: [lecturerId], references: [id], onDelete: Restrict)
   enrollments ClassEnrollment[]
@@ -63,102 +64,108 @@ model Class {
 model ClassEnrollment {
   classId    String
   studentId  String
-  enrolledAt DateTime          @default(now())
-  status     String            @default("ACTIVE") // ACTIVE, DROPPED
+  enrolledAt DateTime @default(now())
+  status     String   @default("ACTIVE") // ACTIVE, DROPPED
 
-  class      Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
-  student    User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@id([classId, studentId])
   @@map("class_enrollments")
 }
 
 model Exam {
-  id              String         @id @default(uuid())
+  id              String   @id @default(uuid())
   classId         String
   title           String
   descriptionMd   String
-  allowedLanguage String         @default("PYTHON") // PYTHON, CSHARP, JAVA
-  examType        String         @default("INDIVIDUAL") // INDIVIDUAL, GROUP
-  timeLimitMs     Int            @default(2000)
-  memoryLimitMb   Int            @default(512)
+  allowedLanguage String   @default("PYTHON") // PYTHON, CSHARP, JAVA
+  examType        String   @default("INDIVIDUAL") // INDIVIDUAL, GROUP
+  timeLimitMs     Int      @default(2000)
+  memoryLimitMb   Int      @default(512)
   startTime       DateTime
   endTime         DateTime
-  lowerBound      Float          @default(0.5)
-  upperBound      Float          @default(1.2)
-  maxTeamSize     Int            @default(5)
-  createdAt       DateTime       @default(now())
+  lowerBound      Float    @default(0.5)
+  upperBound      Float    @default(1.2)
+  maxTeamSize     Int      @default(5)
+  createdAt       DateTime @default(now())
 
-  class           Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
-  testCases       TestCase[]
-  submissions     Submission[]
-  teams           Team[]
+  class             Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  testCases         TestCase[]
+  submissions       Submission[]
+  teams             Team[]
   plagiarismReports PlagiarismReport[]
-  appeals         Appeal[]
+  appeals           Appeal[]
 
   @@map("exams")
 }
 
 model TestCase {
-  id             String          @id @default(uuid())
+  id             String   @id @default(uuid())
   examId         String
   inputData      String
   expectedOutput String
-  isHidden       Boolean         @default(false)
-  scoreWeight    Float           @default(1.0)
+  isHidden       Boolean  @default(false)
+  scoreWeight    Float    @default(1.0)
   orderIndex     Int
-  createdAt      DateTime        @default(now())
+  createdAt      DateTime @default(now())
 
-  exam           Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
-  testResults    SubmissionTestResult[]
+  exam        Exam                   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  testResults SubmissionTestResult[]
 
   @@unique([examId, orderIndex])
   @@map("test_cases")
 }
 
 model Submission {
-  id             String          @id @default(uuid())
-  examId         String
-  studentId      String
-  teamId         String?
-  attemptNumber  Int             @default(1)
-  sourceCodeUrl  String          // Storage key for ZIP; legacy text preserved by migration
-  fileHashSha256 String
-  commitSha      String?
-  repoMatchStatus   String?
-  repoMatchPercent  Float?
-  repoMatchDetails  Json?
-  artifactType   String          @default("ZIP")
+  id               String    @id @default(uuid())
+  examId           String
+  studentId        String
+  teamId           String?
+  attemptNumber    Int       @default(1)
+  sourceCodeUrl    String // Storage key for ZIP; legacy text preserved by migration
+  fileHashSha256   String
+  commitSha        String?
+  repoMatchStatus  String?
+  repoMatchPercent Float?
+  repoMatchDetails Json?
+  artifactType     String    @default("ZIP")
   originalFilename String?
-  entrypoint     String?
-  astStatus      String          @default("PENDING")
-  astMessage     String?
-  astCompletedAt DateTime?
-  astVersion     String?
-  astK           Int?
-  astW           Int?
-  status         String          @default("QUEUED") // QUEUED, RUNNING, COMPLETED, COMPILE_ERROR, FAILED, LATE
-  isLate         Boolean         @default(false)
-  totalScore     Float           @default(0.0)
-  compileMessage String?
-  submittedAt    DateTime        @default(now())
-  startedAt      DateTime?
-  completedAt    DateTime?
+  entrypoint       String?
+  astStatus        String    @default("PENDING")
+  astMessage       String?
+  astCompletedAt   DateTime?
+  astVersion       String?
+  astK             Int?
+  astW             Int?
+  status           String    @default("QUEUED") // QUEUED, RUNNING, COMPLETED, COMPILE_ERROR, FAILED, LATE
+  isLate           Boolean   @default(false)
+  totalScore       Float     @default(0.0)
+  manualScore      Float?
+  lecturerFeedback String?
+  gradedAt         DateTime?
+  gradedById       String?
+  compileMessage   String?
+  submittedAt      DateTime  @default(now())
+  startedAt        DateTime?
+  completedAt      DateTime?
 
-  exam           Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student        User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  team           Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  testResults    SubmissionTestResult[]
-  sourceFiles    SubmissionFile[]
-  fingerprints   ASTFingerprint[]
-  aiReviews      AIReview[]
+  exam         Exam                   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student      User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradedBy     User?                  @relation("SubmissionGrader", fields: [gradedById], references: [id], onDelete: SetNull)
+  team         Team?                  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  testResults  SubmissionTestResult[]
+  sourceFiles  SubmissionFile[]
+  fingerprints ASTFingerprint[]
+  aiReviews    AIReview[]
 
-  plagiarismA    PlagiarismReport[] @relation("SubA")
-  plagiarismB    PlagiarismReport[] @relation("SubB")
-  appeals        Appeal[]
+  plagiarismA PlagiarismReport[] @relation("SubA")
+  plagiarismB PlagiarismReport[] @relation("SubB")
+  appeals     Appeal[]
 
   @@unique([id, examId])
   @@unique([examId, studentId, attemptNumber])
+  @@index([gradedById])
   @@map("submissions")
 }
 
@@ -173,59 +180,59 @@ model SubmissionFile {
 }
 
 model SubmissionTestResult {
-  id             String          @id @default(uuid())
-  submissionId   String
-  testCaseId     String
-  status         String          // ACCEPTED, WRONG_ANSWER, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED, RUNTIME_ERROR
-  actualOutput   String?
-  stderr         String?
-  exitCode       Int?
-  outputTruncated Boolean        @default(false)
-  executionTimeMs Int            @default(0)
-  memoryUsedKb   Int             @default(0)
-  scoreEarned    Float           @default(0.0)
-  createdAt      DateTime        @default(now())
+  id              String   @id @default(uuid())
+  submissionId    String
+  testCaseId      String
+  status          String // ACCEPTED, WRONG_ANSWER, TIME_LIMIT_EXCEEDED, MEMORY_LIMIT_EXCEEDED, RUNTIME_ERROR
+  actualOutput    String?
+  stderr          String?
+  exitCode        Int?
+  outputTruncated Boolean  @default(false)
+  executionTimeMs Int      @default(0)
+  memoryUsedKb    Int      @default(0)
+  scoreEarned     Float    @default(0.0)
+  createdAt       DateTime @default(now())
 
-  submission     Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  testCase       TestCase        @relation(fields: [testCaseId], references: [id], onDelete: Restrict)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCase   TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Restrict)
 
   @@unique([submissionId, testCaseId])
   @@map("submission_test_results")
 }
 
 model ASTFingerprint {
-  id           Int               @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   submissionId String
-  sourcePath   String            @default("")
+  sourcePath   String   @default("")
   hashValue    BigInt
   lineStart    Int
   lineEnd      Int
   tokenStart   Int
   tokenEnd     Int
-  createdAt    DateTime          @default(now())
+  createdAt    DateTime @default(now())
 
-  submission   Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
+  @@unique([submissionId, sourcePath, tokenStart])
   @@index([hashValue, submissionId])
   @@index([submissionId])
-  @@unique([submissionId, sourcePath, tokenStart])
   @@map("ast_fingerprints")
 }
 
 model PlagiarismReport {
-  id                 String      @id @default(uuid())
+  id                 String   @id @default(uuid())
   examId             String
   submissionAId      String
   submissionBId      String
-  similarityScore    Float       // 0.00 - 100.00
-  matchedHashesCount Int         @default(0)
-  status             String      @default("SUSPECTED") // SUSPECTED, CONFIRMED, DISMISSED
+  similarityScore    Float // 0.00 - 100.00
+  matchedHashesCount Int      @default(0)
+  status             String   @default("SUSPECTED") // SUSPECTED, CONFIRMED, DISMISSED
   lecturerNote       String?
-  createdAt          DateTime    @default(now())
+  createdAt          DateTime @default(now())
 
-  exam               Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
-  submissionA        Submission  @relation("SubA", fields: [submissionAId, examId], references: [id, examId], onDelete: Cascade)
-  submissionB        Submission  @relation("SubB", fields: [submissionBId, examId], references: [id, examId], onDelete: Cascade)
+  exam        Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  submissionA Submission @relation("SubA", fields: [submissionAId, examId], references: [id, examId], onDelete: Cascade)
+  submissionB Submission @relation("SubB", fields: [submissionBId, examId], references: [id, examId], onDelete: Cascade)
 
   @@unique([examId, submissionAId, submissionBId])
   @@index([examId])
@@ -233,18 +240,18 @@ model PlagiarismReport {
 }
 
 model AIReview {
-  id              String         @id @default(uuid())
-  submissionId    String
-  reviewRound     Int            @default(1)
-  cleanCodeScore  Float
-  solidAnalysis   String
+  id               String   @id @default(uuid())
+  submissionId     String
+  reviewRound      Int      @default(1)
+  cleanCodeScore   Float
+  solidAnalysis    String
   errorExplanation String?
-  suggestions     String
-  tokensUsed      Int            @default(0)
-  modelName       String
-  createdAt       DateTime       @default(now())
+  suggestions      String
+  tokensUsed       Int      @default(0)
+  modelName        String
+  createdAt        DateTime @default(now())
 
-  submission      Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@unique([submissionId, reviewRound])
   @@index([submissionId])
@@ -252,11 +259,11 @@ model AIReview {
 }
 
 model Team {
-  id            String            @id @default(uuid())
-  examId        String
-  name          String
-  repoUrl       String?
-  createdAt     DateTime          @default(now())
+  id        String   @id @default(uuid())
+  examId    String
+  name      String
+  repoUrl   String?
+  createdAt DateTime @default(now())
 
   exam          Exam              @relation(fields: [examId], references: [id], onDelete: Cascade)
   members       TeamMember[]
@@ -269,16 +276,16 @@ model Team {
 }
 
 model TeamMember {
-  id             String            @id @default(uuid())
+  id             String   @id @default(uuid())
   teamId         String
   studentId      String
-  role           String            @default("MEMBER") // LEADER, MEMBER
+  role           String   @default("MEMBER") // LEADER, MEMBER
   githubUsername String?
-  joinedAt       DateTime          @default(now())
+  joinedAt       DateTime @default(now())
 
-  team           Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  student        User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  contributions  GitContribution[]
+  team          Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student       User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  contributions GitContribution[]
 
   @@unique([teamId, studentId])
   @@index([teamId])
@@ -287,22 +294,22 @@ model TeamMember {
 }
 
 model GitContribution {
-  id                  String       @id @default(uuid())
+  id                  String   @id @default(uuid())
   teamId              String
   memberId            String
-  commitsCount        Int          @default(0)
-  locAdded            Int          @default(0)
-  locDeleted          Int          @default(0)
-  contributionPercent Float        @default(0.0) // 0.0 - 100.0%
-  personalScore       Float?       // Team score adjusted by the member contribution factor.
-  isWarning           Boolean      @default(false) // True when contribution is below 5%.
-  isManualOverride    Boolean      @default(false)
-  syncStatus          String       @default("SUCCESS") // SUCCESS, FAILED, PENDING
+  commitsCount        Int      @default(0)
+  locAdded            Int      @default(0)
+  locDeleted          Int      @default(0)
+  contributionPercent Float    @default(0.0) // 0.0 - 100.0%
+  personalScore       Float? // Team score adjusted by the member contribution factor.
+  isWarning           Boolean  @default(false) // True when contribution is below 5%.
+  isManualOverride    Boolean  @default(false)
+  syncStatus          String   @default("SUCCESS") // SUCCESS, FAILED, PENDING
   syncError           String?
-  syncedAt            DateTime     @default(now())
+  syncedAt            DateTime @default(now())
 
-  team                Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  member              TeamMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  team   Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  member TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, memberId])
   @@index([teamId])
@@ -310,32 +317,32 @@ model GitContribution {
 }
 
 model Appeal {
-  id              String      @id @default(uuid())
-  submissionId    String
-  studentId       String
-  examId          String
-  round           Int         @default(1) // 1: Phúc khảo Lần 1 (Giảng viên), 2: Phúc khảo Lần 2 (Khảo thí / Admin)
-  targetRole      String      @default("LECTURER") // LECTURER hoặc ADMIN
-  title           String      @default("Khiếu nại kết quả chấm")
-  reason          String
-  expectedScore   Float?
-  status          String      @default("SUBMITTED") // SUBMITTED, IN_REVIEW, ACCEPTED, REJECTED
-  decisionReason  String?
-  originalScore   Float?      // Điểm số gốc ban đầu từ hệ thống / AI để so sánh minh bạch
-  previousScore   Float
-  newScore        Float?
-  resolvedById    String?
-  resolvedAt      DateTime?
-  parentAppealId  String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String    @id @default(uuid())
+  submissionId   String
+  studentId      String
+  examId         String
+  round          Int       @default(1) // 1: Phúc khảo Lần 1 (Giảng viên), 2: Phúc khảo Lần 2 (Khảo thí / Admin)
+  targetRole     String    @default("LECTURER") // LECTURER hoặc ADMIN
+  title          String    @default("Khiếu nại kết quả chấm")
+  reason         String
+  expectedScore  Float?
+  status         String    @default("SUBMITTED") // SUBMITTED, IN_REVIEW, ACCEPTED, REJECTED
+  decisionReason String?
+  originalScore  Float? // Điểm số gốc ban đầu từ hệ thống / AI để so sánh minh bạch
+  previousScore  Float
+  newScore       Float?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  parentAppealId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  submission     Submission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  student        User        @relation("StudentAppeals", fields: [studentId], references: [id], onDelete: Cascade)
-  exam           Exam        @relation(fields: [examId], references: [id], onDelete: Cascade)
-  resolvedBy     User?       @relation("ResolvedAppeals", fields: [resolvedById], references: [id], onDelete: Restrict)
-  parentAppeal   Appeal?     @relation("AppealRounds", fields: [parentAppealId], references: [id], onDelete: SetNull)
-  childAppeals   Appeal[]    @relation("AppealRounds")
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  student      User       @relation("StudentAppeals", fields: [studentId], references: [id], onDelete: Cascade)
+  exam         Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  resolvedBy   User?      @relation("ResolvedAppeals", fields: [resolvedById], references: [id], onDelete: Restrict)
+  parentAppeal Appeal?    @relation("AppealRounds", fields: [parentAppealId], references: [id], onDelete: SetNull)
+  childAppeals Appeal[]   @relation("AppealRounds")
 
   @@index([studentId])
   @@index([examId])
@@ -348,8 +355,8 @@ model Appeal {
 
 model AuditLog {
   id         String   @id @default(uuid())
-  action     String   // CHANGE_LEADER, UPDATE_REPO, OVERRIDE_SCORE, LATE_APPROVAL
-  entityType String   // TEAM, SUBMISSION, EXAM
+  action     String // CHANGE_LEADER, UPDATE_REPO, OVERRIDE_SCORE, LATE_APPROVAL
+  entityType String // TEAM, SUBMISSION, EXAM
   entityId   String
   actorId    String
   oldValue   String?  @db.Text
@@ -357,10 +364,9 @@ model AuditLog {
   reason     String?  @db.Text
   createdAt  DateTime @default(now())
 
-  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([actorId])
   @@map("audit_logs")
 }
-

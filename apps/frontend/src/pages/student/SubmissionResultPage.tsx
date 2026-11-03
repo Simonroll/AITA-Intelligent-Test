@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { MarkdownPreview } from '../../components/MarkdownPreview';
-import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('vi-VN', {
@@ -34,6 +33,12 @@ export const SubmissionResultPage: React.FC = () => {
   const { id } = useParams();
   const [submission, setSubmission] = useState<any>(null);
   const [error, setError] = useState('');
+  const [editingScore, setEditingScore] = useState('');
+  const [editingFeedback, setEditingFeedback] = useState('');
+  const [savingRegrade, setSavingRegrade] = useState(false);
+  const [reRunningSandbox, setReRunningSandbox] = useState(false);
+  const [regradeNotice, setRegradeNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const gradeFormInitialized = useRef(false);
 
   // AI Review States
   const [triggeringAiReview, setTriggeringAiReview] = useState(false);
@@ -54,6 +59,11 @@ export const SubmissionResultPage: React.FC = () => {
     const res = await apiRequest('/submissions/' + id);
     if (res.success && res.data) {
       setSubmission(res.data);
+      if (!gradeFormInitialized.current) {
+        setEditingScore(String(res.data.manualScore ?? res.data.totalScore ?? ''));
+        setEditingFeedback(res.data.lecturerFeedback || '');
+        gradeFormInitialized.current = true;
+      }
     } else {
       setError(res.message || 'Không tải được kết quả.');
     }
@@ -68,6 +78,7 @@ export const SubmissionResultPage: React.FC = () => {
   };
 
   useEffect(() => {
+    gradeFormInitialized.current = false;
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
 
@@ -79,6 +90,11 @@ export const SubmissionResultPage: React.FC = () => {
         return;
       }
       setSubmission(res.data);
+      if (!gradeFormInitialized.current) {
+        setEditingScore(String(res.data.manualScore ?? res.data.totalScore ?? ''));
+        setEditingFeedback(res.data.lecturerFeedback || '');
+        gradeFormInitialized.current = true;
+      }
       if (
         ['QUEUED', 'RUNNING'].includes(res.data.status) ||
         (['PENDING', 'RUNNING'].includes(res.data.astStatus) &&
@@ -105,7 +121,7 @@ export const SubmissionResultPage: React.FC = () => {
     setSavingRegrade(true);
     setRegradeNotice(null);
     const scoreNum = Number(editingScore);
-    if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+    if (!editingScore.trim() || !Number.isFinite(scoreNum) || scoreNum < 0 || scoreNum > 100) {
       setRegradeNotice({ type: 'error', text: 'Điểm số không hợp lệ (phải từ 0 đến 100).' });
       setSavingRegrade(false);
       return;
@@ -128,8 +144,8 @@ export const SubmissionResultPage: React.FC = () => {
   };
 
   const handleReRunSandbox = async () => {
+    if (!window.confirm('Chạy lại bài trên Docker Sandbox? Kết quả test cũ và điểm chấm tay hiện tại sẽ được thay thế.')) return;
     setReRunningSandbox(true);
-    setShowConfirmSandbox(false);
     setRegradeNotice(null);
     const res = await apiRequest('/submissions/' + id + '/re-run-sandbox', { method: 'POST' });
     setReRunningSandbox(false);
@@ -138,19 +154,6 @@ export const SubmissionResultPage: React.FC = () => {
       await loadSubmission();
     } else {
       setRegradeNotice({ type: 'error', text: res.message || 'Không thể kích hoạt chấm lại trên Sandbox.' });
-    }
-  };
-
-  const handleViewSourceFiles = async () => {
-    setShowSourceModal(true);
-    if (sourceFiles.length === 0) {
-      setLoadingFiles(true);
-      const res = await apiRequest<Array<{ path: string; content: string }>>('/submissions/' + id + '/source-files');
-      setLoadingFiles(false);
-      if (res.success && res.data) {
-        setSourceFiles(res.data);
-        setSelectedFileIndex(0);
-      }
     }
   };
 
@@ -413,6 +416,41 @@ export const SubmissionResultPage: React.FC = () => {
           )} */}
         </div>
       </div>
+
+      {(user?.role === 'LECTURER' || user?.role === 'ADMIN') && (
+        <section className="card" aria-labelledby="lecturer-grade-title" style={{ marginTop: '1rem' }}>
+          <h3 id="lecturer-grade-title">Giảng viên: chấm và chạy lại</h3>
+          <p style={{ color: '#94a3b8' }}>
+            Điểm Sandbox: {submission.totalScore ?? 0} / 100
+            {submission.manualScore != null && <> · Điểm giảng viên: <strong>{submission.manualScore} / 100</strong></>}
+          </p>
+          {regradeNotice && <p role={regradeNotice.type === 'error' ? 'alert' : 'status'} style={{ color: regradeNotice.type === 'error' ? '#f87171' : '#34d399' }}>{regradeNotice.text}</p>}
+          {['COMPLETED', 'COMPILE_ERROR', 'FAILED'].includes(submission.status) ? (
+            <form onSubmit={handleSaveRegrade}>
+              <div className="form-group">
+                <label htmlFor="manual-grade-score">Điểm giảng viên (0–100)</label>
+                <input id="manual-grade-score" className="form-control" type="number" min="0" max="100" step="0.01" required
+                  value={editingScore} onChange={e => setEditingScore(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="manual-grade-feedback">Nhận xét</label>
+                <textarea id="manual-grade-feedback" className="form-control" rows={3} maxLength={4000}
+                  value={editingFeedback} onChange={e => setEditingFeedback(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" type="submit" disabled={savingRegrade || reRunningSandbox}>
+                  {savingRegrade ? 'Đang lưu…' : 'Lưu điểm giảng viên'}
+                </button>
+                {submission.artifactType === 'ZIP' && (
+                  <button className="btn btn-secondary" type="button" onClick={handleReRunSandbox} disabled={savingRegrade || reRunningSandbox}>
+                    {reRunningSandbox ? 'Đang đưa vào hàng đợi…' : 'Chạy lại Sandbox'}
+                  </button>
+                )}
+              </div>
+            </form>
+          ) : <p role="status">Chờ Sandbox hoàn tất trước khi chấm tay hoặc chạy lại.</p>}
+        </section>
+      )}
 
       {/* CARD 2: AI COMPILATION ERROR EXPLAINER */}
       {(submission.status === 'COMPILE_ERROR' || submission.compileMessage) && (

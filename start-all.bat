@@ -64,7 +64,10 @@ echo [5/5] Dang khoi dong API, worker va frontend...
 echo Frontend: http://localhost:5173
 echo API:      http://localhost:5000/api/health
 echo Prisma:   http://localhost:5555
+echo Demo:     Click Admin Test / Lecturer Test / Student Test at the login page
 echo Nhan Ctrl+C de dung, hoac chay file stop-all.bat de tat toan bo nhanh chong.
+set "DEMO_LOGIN_ENABLED=true"
+set "NODE_ENV=development"
 call npm.cmd start
 set "EXIT_CODE=%ERRORLEVEL%"
 exit /b %EXIT_CODE%

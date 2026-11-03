@@ -174,8 +174,11 @@ submissionRouter.post('/submissions/:id/regrade', authenticateJwt, asyncRoute(as
   await classAccess(submission.exam.classId, req.user!, true);
   const { manualScore, lecturerFeedback } = req.body || {};
   const scoreNum = Number(manualScore);
-  if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+  if (manualScore === undefined || manualScore === null || manualScore === '' || !Number.isFinite(scoreNum) || scoreNum < 0 || scoreNum > 100) {
     throw new HttpError(400, 'Điểm chấm lại không hợp lệ (phải là số từ 0 đến 100).');
+  }
+  if (lecturerFeedback !== undefined && lecturerFeedback !== null && (typeof lecturerFeedback !== 'string' || lecturerFeedback.length > 4000)) {
+    throw new HttpError(400, 'Nhận xét phải là chuỗi không quá 4000 ký tự.');
   }
   const updated = await submissionService.regradeSubmission(
     submission.id,
@@ -193,7 +196,7 @@ submissionRouter.post('/submissions/:id/re-run-sandbox', authenticateJwt, asyncR
   const submission = await submissionService.getSubmission(String(req.params.id));
   await classAccess(submission.exam.classId, req.user!, true);
   await submissionService.reRunSandbox(submission.id);
-  res.json({ success: true, message: 'Đã kích hoạt chấm lại trên Docker Sandbox container.' });
+  res.json({ success: true, message: 'Đã đưa bài nộp vào hàng đợi Docker Sandbox.' });
 }));
 
 submissionRouter.post('/submissions/:id/re-run-ai', authenticateJwt, asyncRoute(async (req: AuthRequest, res) => {

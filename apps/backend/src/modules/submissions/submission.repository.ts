@@ -165,27 +165,32 @@ export class SubmissionRepository {
     lecturerFeedback: string | null,
     gradedById: string
   ) {
-    await prisma.$executeRawUnsafe(
-      'UPDATE "submissions" SET "manualScore" = $1, "lecturerFeedback" = $2, "gradedAt" = $3, "gradedById" = $4, "totalScore" = $1 WHERE id = $5',
+    const updated = await prisma.submission.updateMany({
+      where: { id, status: { in: ['COMPLETED', 'COMPILE_ERROR', 'FAILED'] } },
+      data: {
       manualScore,
-      lecturerFeedback || null,
-      new Date(),
+      lecturerFeedback: lecturerFeedback || null,
+      gradedAt: new Date(),
       gradedById,
-      id
-    );
+      totalScore: manualScore,
+      },
+    });
+    if (!updated.count) return null;
     return this.findById(id);
   }
 
   async resetForSandbox(id: string) {
-    return prisma.submission.update({
-      where: { id },
-      data: {
-        status: 'QUEUED',
-        totalScore: 0,
-        compileMessage: null,
-        startedAt: null,
-        completedAt: null,
-      },
+    return prisma.$transaction(async tx => {
+      const claimed = await tx.submission.updateMany({
+        where: { id, status: { in: ['COMPLETED', 'COMPILE_ERROR', 'FAILED'] } },
+        data: {
+          status: 'QUEUED', totalScore: 0, manualScore: null, lecturerFeedback: null,
+          gradedAt: null, gradedById: null, compileMessage: null, startedAt: null, completedAt: null,
+        },
+      });
+      if (!claimed.count) return null;
+      await tx.submissionTestResult.deleteMany({ where: { submissionId: id } });
+      return tx.submission.findUnique({ where: { id } });
     });
   }
 
