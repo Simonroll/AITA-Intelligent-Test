@@ -8,7 +8,8 @@ echo        DANG TAT TOAN BO HE THONG AITA-INTELLIGENT
 echo ========================================================
 echo.
 
-echo [1/3] Dang dung tien trinh Web, Worker, Prisma Studio va Cloudflare Tunnel...
+echo [1/3] Dang danh dau OFFLINE tren Registry va dung tien trinh...
+call node scripts/tunnel-manager.cjs --offline
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr "LISTENING" ^| findstr ":5000 :5173 :5555"') do (
     taskkill /PID %%a /T /F >nul 2>&1
 )

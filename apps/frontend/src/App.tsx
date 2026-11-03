@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Navbar } from './components/Navbar';
+import { BackendStatusBanner } from './components/BackendStatusBanner';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { LecturerDashboard } from './pages/lecturer/LecturerDashboard';
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Navbar />
+          <BackendStatusBanner />
           <main style={{ flex: 1, paddingBottom: '3rem' }}>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
