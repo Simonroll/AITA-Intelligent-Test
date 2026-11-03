@@ -9,20 +9,23 @@ async function refreshSession(): Promise<boolean> {
     const timeout = setTimeout(() => controller.abort(), 4000);
     const apiBase = await getBackendApiBaseUrl();
 
-    const headers = new Headers({ 'X-AITA-Request': '1' });
+    const headers = new Headers({ 'X-AITA-Request': '1', 'Content-Type': 'application/json' });
     const token = localStorage.getItem('aita_token');
+    const refreshToken = localStorage.getItem('aita_refresh_token');
     if (token) headers.set('Authorization', `Bearer ${token}`);
 
     refreshInFlight = fetch(apiBase + '/auth/refresh', {
       method: 'POST',
       credentials: 'include',
       headers,
+      body: JSON.stringify({ refreshToken }),
       signal: controller.signal,
     }).then(async response => {
       clearTimeout(timeout);
       if (!response.ok) return false;
       const result = await response.json();
       if (result.data?.token) localStorage.setItem('aita_token', result.data.token);
+      if (result.data?.refreshToken) localStorage.setItem('aita_refresh_token', result.data.refreshToken);
       if (result.data?.user) window.dispatchEvent(new CustomEvent('aita-session-refreshed', { detail: result.data }));
       return true;
     }).catch(() => false).finally(() => {
@@ -98,31 +101,21 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
       return response.ok ? result : { success: false, message: result.message || 'Yêu cầu thất bại.', details: result.details };
     }
 
-    // Non-JSON response (e.g. HTML error 502/530 from Cloudflare or Vercel proxy)
+    // Handle Blob/Attachment responses (e.g. Excel exports, ZIP downloads)
+    if (contentType.includes('application/octet-stream') || contentType.includes('application/zip') || contentType.includes('vnd.openxmlformats')) {
+      const blob = await response.blob();
+      return response.ok ? { success: true, data: blob as any } : { success: false, message: 'Tải tệp tin thất bại.' };
+    }
+
+    // If unexpected response (HTML error page from proxy or tunnel)
     const text = await response.text();
-    invalidateConfigCache();
-    await fetchRuntimeConfig(true);
-    return {
-      success: false,
-      message: response.status >= 500
-        ? `Lỗi kết nối máy chủ [${response.status}]. Đang kiểm tra lại trạng thái Backend...`
-        : `Phản hồi không hợp lệ từ máy chủ: ${text.slice(0, 80)}`,
-    };
+    if (!response.ok) {
+      return { success: false, message: `Lỗi kết nối (${response.status}): Không thể kết nối tới Backend AITA.` };
+    }
+    return { success: true, data: text as any };
   } catch (error: any) {
     clearTimeout(timeout);
-    invalidateConfigCache();
-    const config = await fetchRuntimeConfig(true);
-    if (config.status === 'OFFLINE') {
-      return {
-        success: false,
-        message: 'Máy chủ Backend hiện đang tắt (OFFLINE).',
-      };
-    }
-    return {
-      success: false,
-      message: error.name === 'AbortError'
-        ? 'Hết thời gian chờ phản hồi từ máy chủ (cổng 5000).'
-        : (error.message || 'Không thể kết nối máy chủ.'),
-    };
+    if (error.name === 'AbortError') return { success: false, message: 'Yêu cầu vượt quá thời gian chờ (15s).' };
+    return { success: false, message: 'Không thể kết nối đến máy chủ Backend AITA. Vui lòng kiểm tra lại kết nối mạng.' };
   }
 }

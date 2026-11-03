@@ -27,7 +27,7 @@ export const LoginPage: React.FC = () => {
 
     setLoading(false);
     if (res.success && res.data) {
-      login(res.data.token, res.data.user);
+      login(res.data.token, res.data.user, res.data.refreshToken);
       if (res.data.user.role !== 'STUDENT') {
         navigate('/lecturer');
       } else {

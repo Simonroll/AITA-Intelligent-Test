@@ -13,7 +13,7 @@ function sendSession(res: Response, session: Awaited<ReturnType<typeof authServi
   res.cookie('aita_access', session.token, { ...cookieOptions(), path: '/api', maxAge: ACCESS_SECONDS * 1000 });
   res.cookie('aita_refresh', session.refreshToken, { ...cookieOptions(), path: '/api/auth', expires: session.expiresAt });
   res.setHeader('Cache-Control', 'no-store');
-  res.status(status).json({ success: true, data: { user: session.user, token: session.token, expiresIn: ACCESS_SECONDS } });
+  res.status(status).json({ success: true, data: { user: session.user, token: session.token, refreshToken: session.refreshToken, expiresIn: ACCESS_SECONDS } });
 }
 const loginLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false, message: { success: false, message: 'Quá nhiều lần đăng nhập. Vui lòng thử lại sau.' } });
 authRouter.post('/register', loginLimit, asyncRoute(async (req, res) => {
@@ -32,10 +32,14 @@ authRouter.post('/google', loginLimit, asyncRoute(async (req, res) => {
   res.clearCookie('aita_google_nonce', { ...cookieOptions(), path: '/api/auth/google' });
   sendSession(res, await authService.googleLogin(req.body?.credential, nonce, req.body?.password));
 }));
-authRouter.post('/refresh', asyncRoute(async (req, res) => { sendSession(res, await authService.refresh(req.cookies?.aita_refresh)); }));
+authRouter.post('/refresh', asyncRoute(async (req, res) => {
+  const token = req.body?.refreshToken || req.cookies?.aita_refresh;
+  sendSession(res, await authService.refresh(token));
+}));
 authRouter.post('/logout', asyncRoute(async (req, res) => {
   const bearer = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : undefined;
-  await authService.logout(req.cookies?.aita_refresh, bearer || req.cookies?.aita_access);
+  const refreshToken = req.body?.refreshToken || req.cookies?.aita_refresh;
+  await authService.logout(refreshToken, bearer || req.cookies?.aita_access);
   res.clearCookie('aita_access', { ...cookieOptions(), path: '/api' });
   res.clearCookie('aita_refresh', { ...cookieOptions(), path: '/api/auth' });
   res.json({ success: true });

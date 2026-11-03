@@ -53,7 +53,7 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
             if (!active) return;
             setBusy(false);
             if (result.success && result.data) {
-              login(result.data.token, result.data.user);
+              login(result.data.token, result.data.user, result.data.refreshToken);
               navigate(result.data.user.role === 'STUDENT' ? '/student' : '/lecturer');
             } else { setMessage(result.message || 'Đăng nhập Google thất bại.'); setRetry(value => value + 1); }
           },
