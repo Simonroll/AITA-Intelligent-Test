@@ -6,8 +6,8 @@ export interface RuntimeConfig {
   updated_at?: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://jdkgktdwdluhqowhocqr.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_G3qbLrz4uARrQGoa2VpLVA_mjiHvwM0';
 const SERVICE_NAME = 'aita-backend';
 
 const CACHE_KEY = 'aita_runtime_config';
