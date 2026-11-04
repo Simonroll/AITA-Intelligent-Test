@@ -28,7 +28,7 @@ authRouter.get('/google/config', (_req, res) => {
   res.json({ success: true, data: { clientId, nonce } });
 });
 authRouter.post('/google', loginLimit, asyncRoute(async (req, res) => {
-  const nonce = req.cookies?.aita_google_nonce || '';
+  const nonce = req.body?.nonce || req.cookies?.aita_google_nonce || '';
   res.clearCookie('aita_google_nonce', { ...cookieOptions(), path: '/api/auth/google' });
   sendSession(res, await authService.googleLogin(req.body?.credential, nonce, req.body?.password));
 }));

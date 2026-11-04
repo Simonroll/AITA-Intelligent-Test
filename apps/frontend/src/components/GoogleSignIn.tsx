@@ -49,7 +49,8 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
           callback: async response => {
             if (!active) return;
             setBusy(true); setMessage('');
-            const result = await apiRequest('/auth/google', { method: 'POST', body: JSON.stringify({ credential: response.credential, password: passwordRef.current || undefined }) });
+            const activeNonce = config.data?.nonce;
+            const result = await apiRequest('/auth/google', { method: 'POST', body: JSON.stringify({ credential: response.credential, nonce: activeNonce, password: passwordRef.current || undefined }) });
             if (!active) return;
             setBusy(false);
             if (result.success && result.data) {
