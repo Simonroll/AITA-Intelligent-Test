@@ -39,7 +39,7 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
       const config = await apiRequest<{ clientId: string | null; nonce: string | null }>('/auth/google/config');
       if (!active) return;
       if (!config.success || !config.data?.clientId || !config.data.nonce) {
-        setMessage(config.message || 'Đăng nhập Google chưa được bật.'); return;
+        return;
       }
       try {
         await loadGoogle();
