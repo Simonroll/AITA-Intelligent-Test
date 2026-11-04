@@ -72,7 +72,7 @@ export const App: React.FC = () => {
               <Route path="/admin/appeals" element={<ProtectedRoute allowedRoles={['ADMIN']}><LecturerAppealsPage /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminUsersPage /></ProtectedRoute>} />
               <Route path="/admin/ai-keys" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAiKeysPage /></ProtectedRoute>} />
-              <Route path="/lecturer/classes/:classId/import-students" element={<ProtectedRoute allowedRoles={['LECTURER']}><ImportStudentsPage /></ProtectedRoute>} />
+              <Route path="/lecturer/classes/:classId/import-students" element={<ProtectedRoute allowedRoles={['LECTURER', 'ADMIN']}><ImportStudentsPage /></ProtectedRoute>} />
               <Route path="/lecturer/classes/:classId/exams/:examId/edit" element={<ProtectedRoute allowedRoles={['LECTURER', 'ADMIN']}><EditExamPage /></ProtectedRoute>} />
               <Route path="/lecturer/classes/:classId/students" element={<ProtectedRoute allowedRoles={['LECTURER', 'ADMIN']}><ClassRosterPage /></ProtectedRoute>} />
               <Route
@@ -86,7 +86,7 @@ export const App: React.FC = () => {
               <Route
                 path="/lecturer/classes/:classId/create-exam"
                 element={
-                  <ProtectedRoute allowedRoles={['LECTURER']}>
+                  <ProtectedRoute allowedRoles={['LECTURER', 'ADMIN']}>
                     <CreateExamPage />
                   </ProtectedRoute>
                 }

@@ -210,6 +210,7 @@ input, textarea, select {
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
+  z-index: 50;
   display: flex;
   flex-direction: column;
   min-width: 13.5rem;

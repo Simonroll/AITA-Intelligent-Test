@@ -329,7 +329,7 @@ export const LecturerDashboard: React.FC = () => {
                       </svg>
                     </button>
                     <div className="class-card-options" aria-label={`Thao tác lớp ${cls.classCode}`}>
-                      {!isAdmin && (
+                      {(!isAdmin || cls.lecturerId === user?.id) && (
                         <Link to={`/lecturer/classes/${cls.id}/create-exam`} onClick={() => setOpenClassMenu(null)}>
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '0.5rem' }}>
                             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -338,7 +338,7 @@ export const LecturerDashboard: React.FC = () => {
                           Tạo đề thi mới
                         </Link>
                       )}
-                      {!isAdmin && (
+                      {(!isAdmin || cls.lecturerId === user?.id) && (
                         <Link to={`/lecturer/classes/${cls.id}/import-students`} onClick={() => setOpenClassMenu(null)}>
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '0.5rem' }}>
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -348,8 +348,7 @@ export const LecturerDashboard: React.FC = () => {
                           Import sinh viên
                         </Link>
                       )}
-                      {!isAdmin && (
-                        <>
+                      <>
                           <button
                             type="button"
                             onClick={() => {
@@ -380,7 +379,6 @@ export const LecturerDashboard: React.FC = () => {
                             Xóa lớp
                           </button>
                         </>
-                      )}
                     </div>
                   </div>
                 </div>
