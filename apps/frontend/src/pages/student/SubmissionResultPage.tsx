@@ -538,65 +538,48 @@ export const SubmissionResultPage: React.FC = () => {
 
       {/* CARD 3: SEMANTIC CODE REVIEW & CLEAN CODE SCORING */}
       {latestAiReview && (
-        <div className="clean-code-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(59, 130, 246, 0.25)', paddingBottom: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#93c5fd' }}>
-                Đánh Giá Chất Lượng Clean Code & Kiến Trúc SOLID
-                </h3>
-              </div>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
-                Mô hình: <code>{latestAiReview.modelName}</code> · Round: #{latestAiReview.reviewRound} · Đánh giá tự động
-              </p>
+        <section className="clean-code-card" aria-labelledby="ai-review-heading">
+          <div className="clean-review-header">
+            <div className="clean-review-title">
+              <span className="clean-review-eyebrow">AI CODE REVIEW</span>
+              <h3 id="ai-review-heading">Đánh giá mã nguồn</h3>
+              <p>Mô hình <strong>{latestAiReview.modelName}</strong><span aria-hidden="true"> · </span>Lượt {latestAiReview.reviewRound}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div className="clean-score-circle">
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>
-                  {cleanScore}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>/ 10 ĐIỂM</span>
-              </div>
-              <div>
-                <span className={`badge ${scoreBadgeClass}`} style={{ fontSize: '0.85rem', padding: '0.3rem 0.65rem' }}>
-                  {cleanScore >= 8.5 ? 'XUẤT SẮC' : cleanScore >= 7.0 ? 'ĐẠT CHUẨN' : cleanScore >= 5.0 ? 'TRUNG BÌNH' : 'CẦN CẢI THIỆN'}
-                </span>
-              </div>
+            <div className="clean-review-score" aria-label={`Điểm Clean Code ${cleanScore} trên 10`}>
+              <div className="clean-review-score-value"><strong>{cleanScore}</strong><span>/10</span></div>
+              <span className={`badge ${scoreBadgeClass}`}>{cleanScore >= 8.5 ? 'Tốt' : cleanScore >= 7 ? 'Khá' : cleanScore >= 5 ? 'Trung bình' : 'Cần cải thiện'}</span>
             </div>
           </div>
 
-          <div style={{ marginTop: '1.25rem' }}>
-            <h4 style={{ color: '#60a5fa', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M2 13.5V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.5"/><polyline points="2 10 12 2 22 10"/></svg> Phân tích Nguyên lý SOLID & Cấu trúc hàm</h4>
-            <div className="markdown-preview" style={{ background: '#090d16', minHeight: 'auto', marginBottom: '1.25rem' }}>
-              <MarkdownPreview content={latestAiReview.solidAnalysis} />
-            </div>
-
-            <h4 style={{ color: '#34d399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> Gợi ý Cải tiến & Mã nguồn Refactor mẫu</h4>
-            <div className="markdown-preview" style={{ background: '#090d16', minHeight: 'auto' }}>
-              <MarkdownPreview content={latestAiReview.suggestions} />
-            </div>
+          <div className="clean-review-sections">
+            <details className="clean-review-section">
+              <summary>
+                <span><strong>Phân tích code</strong><small>Cấu trúc, hàm và nguyên lý SOLID</small></span>
+                <span className="clean-review-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div className="clean-review-content markdown-preview">
+                <MarkdownPreview content={latestAiReview.solidAnalysis} />
+              </div>
+            </details>
+            <details className="clean-review-section">
+              <summary>
+                <span><strong>Gợi ý cải thiện</strong><small>Đề xuất refactor và ví dụ mã nguồn</small></span>
+                <span className="clean-review-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div className="clean-review-content markdown-preview">
+                <MarkdownPreview content={latestAiReview.suggestions} />
+              </div>
+            </details>
           </div>
-        </div>
+        </section>
       )}
-
-      {/* When no AI Review yet and submission finished */}
       {!latestAiReview && !waiting && submission.status !== 'FAILED' && (
-        <div className="card" style={{ marginTop: '1rem', background: 'rgba(30, 41, 59, 0.4)', border: '1px dashed #475569', textAlign: 'center', padding: '1.5rem' }}>
-          <h4 style={{ color: '#93c5fd', margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Đánh giá Clean Code & Nguyên lý SOLID</h4>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 1rem' }}>
-            Bài nộp này chưa có kết quả đánh giá Clean Code tự động hoặc đang trong hàng đợi xử lý.
-          </p>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            disabled={triggeringAiReview}
-            onClick={handleTriggerAiReview}
-          >
-            {triggeringAiReview ? 'Đang phân tích...' : 'Yêu cầu AI Review ngay'}
-          </button>
-        </div>
+        <section className="clean-review-empty" aria-live="polite">
+          <span className="clean-review-eyebrow">AI CODE REVIEW</span>
+          <h3>{triggeringAiReview ? 'Đang tạo đánh giá' : 'Chưa có đánh giá AI'}</h3>
+          <p>{triggeringAiReview ? 'Hệ thống đang phân tích mã nguồn. Kết quả sẽ xuất hiện tại đây.' : 'Dùng nút “Yêu cầu AI Review” ở đầu trang để bắt đầu phân tích.'}</p>
+        </section>
       )}
-
       {/* CARD 4: TEST CASES TABLE */}
       {submission.scoreReleased && (
         <div className="card" style={{ marginTop: '1rem' }}>
