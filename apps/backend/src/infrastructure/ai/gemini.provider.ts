@@ -137,6 +137,16 @@ ${input.materialContent ? `- NỘI DUNG TÀI LIỆU / BÀI GIẢNG / SLIDE ĐÍN
 ${input.materialContent}
 """` : ''}
 
+LƯU Ý QUAN TRỌNG VỀ QUY ĐỊNH ĐỀ BÀI VÀ BỘ TEST CASES:
+1. Trong phần mô tả đề bài (descriptionMd), BẮT BUỘC NÊU RÕ CÁC QUY ĐỊNH KỸ THUẬT:
+   - Tên hàm chuẩn hoặc cấu trúc lớp sinh viên bắt buộc phải cài đặt (ví dụ: hàm 'def solve(...)' hoặc class 'Solution').
+   - Quy định về định dạng đầu vào/đầu ra, nghiêm cấm in các dòng thông báo thừa như 'Nhap n: '.
+   - Quy tắc xử lý trường hợp vi phạm quy định của đề (ví dụ: nếu dữ liệu đầu vào không hợp lệ, số âm, hoặc không tìm thấy kết quả thì bắt buộc phải in ra '-1' hoặc 'INVALID').
+2. Bộ test cases (${input.testCaseCount || 5} tests) PHẢI BAO GỒM:
+   - Các test case kiểm tra chức năng thông thường (Happy path).
+   - Ít nhất 1-2 test case kiểm tra các trường hợp BIÊN và VI PHẠM QUY ĐỊNH CỦA ĐỀ BÀI (vi phạm phạm vi giá trị, dữ liệu rỗng, số âm ngoài khoảng hợp lệ) để kiểm tra việc tuân thủ quy tắc xử lý ngoại lệ theo đúng đặc tả của đề bài.
+   - Thêm trường 'explanation' giải thích rõ loại test: [Chức năng cơ bản], [Biên], hoặc [Vi phạm quy định đề bài].
+
 LƯU Ý: Không dùng ký hiệu LaTeX dạng gạch chéo ngược (như \\le, \\ge, \\mathcal). Hãy viết O(N), <=, >= trực tiếp bằng văn bản thông thường.
 
 Hãy trả về định dạng JSON thuần túy theo schema sau:
@@ -225,6 +235,7 @@ Trả về JSON:
     const prompt = `Hãy thực hiện Semantic Code Review cho bài làm sau:
 Ngôn ngữ: ${input.language}
 ${input.examTitle ? `Đề bài: "${input.examTitle}"` : ''}
+${input.examDescription ? `Mô tả & Quy định đề bài: """\n${input.examDescription.slice(0, 3000)}\n"""` : ''}
 
 Mã nguồn nộp:
 """
@@ -233,7 +244,8 @@ ${filesSnippet.slice(0, 6000)}
 
 Hãy đánh giá chi tiết:
 1. Clean Code Score (thang điểm 0.0 đến 10.0): dựa trên đặt tên biến/hàm, độ dài hàm, magic numbers, DRY.
-2. solidAnalysis: Phân tích các nguyên lý SOLID (đặc biệt là Single Responsibility Principle, tính đóng gói, tách bạch I/O và business logic).
+2. Tuân thủ quy định đề bài (Specification Compliance): Kiểm tra xem bài nộp có vi phạm các quy định của đề bài hay không (sai tên hàm/phương thức được yêu cầu trong đề bài, sai tên class, in thừa chuỗi nhập liệu 'Nhap n:', dùng thư viện cấm). Nếu có, phải liệt kê rõ trong danh sách 'codeSmells' với vị trí và gợi ý sửa tên hàm chính xác.
+3. solidAnalysis: Phân tích các nguyên lý SOLID (đặc biệt là Single Responsibility Principle, tính đóng gói, tách bạch I/O và business logic).
 3. suggestions: Các khuyến nghị cải tiến cụ thể kèm ví dụ code refactor mẫu.
 4. codeSmells: Danh sách các điểm bốc mùi trong code (dòng, file, tên smell, cách sửa).
 

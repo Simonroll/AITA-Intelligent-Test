@@ -1,1 +1,6 @@
-nhập slide
+luồng đăng nhập
+chi tiết luồng chấm bài giải thuật toán
+cơ chế tạo test case
+chấm lại sau AI 
+test case cho trường sai quy định về tên hàm
+báo cáo test

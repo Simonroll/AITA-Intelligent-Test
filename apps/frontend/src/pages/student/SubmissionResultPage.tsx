@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { apiRequest } from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,6 +33,12 @@ export const SubmissionResultPage: React.FC = () => {
   const { id } = useParams();
   const [submission, setSubmission] = useState<any>(null);
   const [error, setError] = useState('');
+  const [editingScore, setEditingScore] = useState('');
+  const [editingFeedback, setEditingFeedback] = useState('');
+  const [savingRegrade, setSavingRegrade] = useState(false);
+  const [reRunningSandbox, setReRunningSandbox] = useState(false);
+  const [regradeNotice, setRegradeNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const gradeFormInitialized = useRef(false);
 
   // AI Review States
   const [triggeringAiReview, setTriggeringAiReview] = useState(false);
@@ -53,6 +59,11 @@ export const SubmissionResultPage: React.FC = () => {
     const res = await apiRequest('/submissions/' + id);
     if (res.success && res.data) {
       setSubmission(res.data);
+      if (!gradeFormInitialized.current) {
+        setEditingScore(String(res.data.manualScore ?? res.data.totalScore ?? ''));
+        setEditingFeedback(res.data.lecturerFeedback || '');
+        gradeFormInitialized.current = true;
+      }
     } else {
       setError(res.message || 'Không tải được kết quả.');
     }
@@ -67,6 +78,7 @@ export const SubmissionResultPage: React.FC = () => {
   };
 
   useEffect(() => {
+    gradeFormInitialized.current = false;
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
 
@@ -78,6 +90,11 @@ export const SubmissionResultPage: React.FC = () => {
         return;
       }
       setSubmission(res.data);
+      if (!gradeFormInitialized.current) {
+        setEditingScore(String(res.data.manualScore ?? res.data.totalScore ?? ''));
+        setEditingFeedback(res.data.lecturerFeedback || '');
+        gradeFormInitialized.current = true;
+      }
       if (
         ['QUEUED', 'RUNNING'].includes(res.data.status) ||
         (['PENDING', 'RUNNING'].includes(res.data.astStatus) &&
@@ -98,6 +115,47 @@ export const SubmissionResultPage: React.FC = () => {
       clearTimeout(timer);
     };
   }, [id, user]);
+
+  const handleSaveRegrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingRegrade(true);
+    setRegradeNotice(null);
+    const scoreNum = Number(editingScore);
+    if (!editingScore.trim() || !Number.isFinite(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+      setRegradeNotice({ type: 'error', text: 'Điểm số không hợp lệ (phải từ 0 đến 100).' });
+      setSavingRegrade(false);
+      return;
+    }
+
+    const res = await apiRequest('/submissions/' + id + '/regrade', {
+      method: 'POST',
+      body: JSON.stringify({
+        manualScore: scoreNum,
+        lecturerFeedback: editingFeedback.trim(),
+      }),
+    });
+    setSavingRegrade(false);
+    if (res.success) {
+      setRegradeNotice({ type: 'success', text: 'Cập nhật điểm và nhận xét của giảng viên thành công!' });
+      await loadSubmission();
+    } else {
+      setRegradeNotice({ type: 'error', text: res.message || 'Không thể cập nhật điểm.' });
+    }
+  };
+
+  const handleReRunSandbox = async () => {
+    if (!window.confirm('Chạy lại bài trên Docker Sandbox? Kết quả test cũ và điểm chấm tay hiện tại sẽ được thay thế.')) return;
+    setReRunningSandbox(true);
+    setRegradeNotice(null);
+    const res = await apiRequest('/submissions/' + id + '/re-run-sandbox', { method: 'POST' });
+    setReRunningSandbox(false);
+    if (res.success) {
+      setRegradeNotice({ type: 'success', text: 'Đã kích hoạt chấm lại trên Docker Sandbox. Kết quả sẽ tự động cập nhật.' });
+      await loadSubmission();
+    } else {
+      setRegradeNotice({ type: 'error', text: res.message || 'Không thể kích hoạt chấm lại trên Sandbox.' });
+    }
+  };
 
   // Trigger on-demand AI Semantic Review
   const handleTriggerAiReview = async () => {
@@ -348,7 +406,7 @@ export const SubmissionResultPage: React.FC = () => {
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                       <code>{f.path}</code>
                       <span style={{ color: f.status === 'MATCHED' ? '#34d399' : f.status === 'MODIFIED' ? '#fbbf24' : '#f87171' }}>
-                        {f.status === 'MATCHED' ? '✓ Khớp 100%' : f.status === 'MODIFIED' ? '✎ Đã sửa đổi' : '✗ Không có trên repo'}
+                        {f.status === 'MATCHED' ? 'Khớp 100%' : f.status === 'MODIFIED' ? 'Đã sửa đổi' : 'Không có trên repo'}
                       </span>
                     </div>
                   ))}
@@ -358,6 +416,41 @@ export const SubmissionResultPage: React.FC = () => {
           )} */}
         </div>
       </div>
+
+      {(user?.role === 'LECTURER' || user?.role === 'ADMIN') && (
+        <section className="card" aria-labelledby="lecturer-grade-title" style={{ marginTop: '1rem' }}>
+          <h3 id="lecturer-grade-title">Giảng viên: chấm và chạy lại</h3>
+          <p style={{ color: '#94a3b8' }}>
+            Điểm Sandbox: {submission.totalScore ?? 0} / 100
+            {submission.manualScore != null && <> · Điểm giảng viên: <strong>{submission.manualScore} / 100</strong></>}
+          </p>
+          {regradeNotice && <p role={regradeNotice.type === 'error' ? 'alert' : 'status'} style={{ color: regradeNotice.type === 'error' ? '#f87171' : '#34d399' }}>{regradeNotice.text}</p>}
+          {['COMPLETED', 'COMPILE_ERROR', 'FAILED'].includes(submission.status) ? (
+            <form onSubmit={handleSaveRegrade}>
+              <div className="form-group">
+                <label htmlFor="manual-grade-score">Điểm giảng viên (0–100)</label>
+                <input id="manual-grade-score" className="form-control" type="number" min="0" max="100" step="0.01" required
+                  value={editingScore} onChange={e => setEditingScore(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="manual-grade-feedback">Nhận xét</label>
+                <textarea id="manual-grade-feedback" className="form-control" rows={3} maxLength={4000}
+                  value={editingFeedback} onChange={e => setEditingFeedback(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" type="submit" disabled={savingRegrade || reRunningSandbox}>
+                  {savingRegrade ? 'Đang lưu…' : 'Lưu điểm giảng viên'}
+                </button>
+                {submission.artifactType === 'ZIP' && (
+                  <button className="btn btn-secondary" type="button" onClick={handleReRunSandbox} disabled={savingRegrade || reRunningSandbox}>
+                    {reRunningSandbox ? 'Đang đưa vào hàng đợi…' : 'Chạy lại Sandbox'}
+                  </button>
+                )}
+              </div>
+            </form>
+          ) : <p role="status">Chờ Sandbox hoàn tất trước khi chấm tay hoặc chạy lại.</p>}
+        </section>
+      )}
 
       {/* CARD 2: AI COMPILATION ERROR EXPLAINER */}
       {(submission.status === 'COMPILE_ERROR' || submission.compileMessage) && (
@@ -445,65 +538,48 @@ export const SubmissionResultPage: React.FC = () => {
 
       {/* CARD 3: SEMANTIC CODE REVIEW & CLEAN CODE SCORING */}
       {latestAiReview && (
-        <div className="clean-code-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(59, 130, 246, 0.25)', paddingBottom: '1rem' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ margin: 0, color: '#93c5fd' }}>
-                Đánh Giá Chất Lượng Clean Code & Kiến Trúc SOLID
-                </h3>
-              </div>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
-                Mô hình: <code>{latestAiReview.modelName}</code> · Round: #{latestAiReview.reviewRound} · Đánh giá tự động
-              </p>
+        <section className="clean-code-card" aria-labelledby="ai-review-heading">
+          <div className="clean-review-header">
+            <div className="clean-review-title">
+              <span className="clean-review-eyebrow">AI CODE REVIEW</span>
+              <h3 id="ai-review-heading">Đánh giá mã nguồn</h3>
+              <p>Mô hình <strong>{latestAiReview.modelName}</strong><span aria-hidden="true"> · </span>Lượt {latestAiReview.reviewRound}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div className="clean-score-circle">
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981' }}>
-                  {cleanScore}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>/ 10 ĐIỂM</span>
-              </div>
-              <div>
-                <span className={`badge ${scoreBadgeClass}`} style={{ fontSize: '0.85rem', padding: '0.3rem 0.65rem' }}>
-                  {cleanScore >= 8.5 ? 'XUẤT SẮC' : cleanScore >= 7.0 ? 'ĐẠT CHUẨN' : cleanScore >= 5.0 ? 'TRUNG BÌNH' : 'CẦN CẢI THIỆN'}
-                </span>
-              </div>
+            <div className="clean-review-score" aria-label={`Điểm Clean Code ${cleanScore} trên 10`}>
+              <div className="clean-review-score-value"><strong>{cleanScore}</strong><span>/10</span></div>
+              <span className={`badge ${scoreBadgeClass}`}>{cleanScore >= 8.5 ? 'Tốt' : cleanScore >= 7 ? 'Khá' : cleanScore >= 5 ? 'Trung bình' : 'Cần cải thiện'}</span>
             </div>
           </div>
 
-          <div style={{ marginTop: '1.25rem' }}>
-            <h4 style={{ color: '#60a5fa', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M2 13.5V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.5"/><polyline points="2 10 12 2 22 10"/></svg> Phân tích Nguyên lý SOLID & Cấu trúc hàm</h4>
-            <div className="markdown-preview" style={{ background: '#090d16', minHeight: 'auto', marginBottom: '1.25rem' }}>
-              <MarkdownPreview content={latestAiReview.solidAnalysis} />
-            </div>
-
-            <h4 style={{ color: '#34d399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> Gợi ý Cải tiến & Mã nguồn Refactor mẫu</h4>
-            <div className="markdown-preview" style={{ background: '#090d16', minHeight: 'auto' }}>
-              <MarkdownPreview content={latestAiReview.suggestions} />
-            </div>
+          <div className="clean-review-sections">
+            <details className="clean-review-section">
+              <summary>
+                <span><strong>Phân tích code</strong><small>Cấu trúc, hàm và nguyên lý SOLID</small></span>
+                <span className="clean-review-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div className="clean-review-content markdown-preview">
+                <MarkdownPreview content={latestAiReview.solidAnalysis} />
+              </div>
+            </details>
+            <details className="clean-review-section">
+              <summary>
+                <span><strong>Gợi ý cải thiện</strong><small>Đề xuất refactor và ví dụ mã nguồn</small></span>
+                <span className="clean-review-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div className="clean-review-content markdown-preview">
+                <MarkdownPreview content={latestAiReview.suggestions} />
+              </div>
+            </details>
           </div>
-        </div>
+        </section>
       )}
-
-      {/* When no AI Review yet and submission finished */}
       {!latestAiReview && !waiting && submission.status !== 'FAILED' && (
-        <div className="card" style={{ marginTop: '1rem', background: 'rgba(30, 41, 59, 0.4)', border: '1px dashed #475569', textAlign: 'center', padding: '1.5rem' }}>
-          <h4 style={{ color: '#93c5fd', margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Đánh giá Clean Code & Nguyên lý SOLID</h4>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 1rem' }}>
-            Bài nộp này chưa có kết quả đánh giá Clean Code tự động hoặc đang trong hàng đợi xử lý.
-          </p>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            disabled={triggeringAiReview}
-            onClick={handleTriggerAiReview}
-          >
-            {triggeringAiReview ? 'Đang phân tích...' : 'Yêu cầu AI Review ngay'}
-          </button>
-        </div>
+        <section className="clean-review-empty" aria-live="polite">
+          <span className="clean-review-eyebrow">AI CODE REVIEW</span>
+          <h3>{triggeringAiReview ? 'Đang tạo đánh giá' : 'Chưa có đánh giá AI'}</h3>
+          <p>{triggeringAiReview ? 'Hệ thống đang phân tích mã nguồn. Kết quả sẽ xuất hiện tại đây.' : 'Dùng nút “Yêu cầu AI Review” ở đầu trang để bắt đầu phân tích.'}</p>
+        </section>
       )}
-
       {/* CARD 4: TEST CASES TABLE */}
       {submission.scoreReleased && (
         <div className="card" style={{ marginTop: '1rem' }}>

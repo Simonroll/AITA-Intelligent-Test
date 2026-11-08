@@ -20,6 +20,7 @@ authRouter.post('/register', loginLimit, asyncRoute(async (req, res) => {
   sendSession(res, await authService.register(req.body?.email, req.body?.password, req.body?.fullName, req.body?.role), 201);
 }));
 authRouter.post('/login', loginLimit, asyncRoute(async (req, res) => { sendSession(res, await authService.login(req.body?.email, req.body?.password)); }));
+authRouter.post('/demo-login', loginLimit, asyncRoute(async (req, res) => { sendSession(res, await authService.demoLogin(req.body?.account)); }));
 authRouter.get('/google/config', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   const clientId = process.env.GOOGLE_CLIENT_ID || null;

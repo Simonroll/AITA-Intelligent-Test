@@ -65,9 +65,9 @@ export const GoogleSignIn: React.FC<{ password?: string }> = ({ password }) => {
     })();
     return () => { active = false; };
   }, [retry, login, navigate]);
-  return <div style={{ marginTop: '1rem' }}>
+  return <div style={{ marginTop: '1rem', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
     <div ref={container} style={{ display: busy ? 'none' : 'flex', justifyContent: 'center' }} />
-    {busy && <p>Đang xác thực Google...</p>}
-    {message && <p role="status" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{message}</p>}
+    {busy && <p style={{ color: 'var(--primary, #38bdf8)', fontSize: '0.9rem' }}>Đang xác thực Google...</p>}
+    {message && <div role="status" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#f87171', padding: '0.6rem 0.8rem', borderRadius: '0.4rem', marginTop: '0.75rem', fontSize: '0.85rem', textAlign: 'center', width: '100%' }}>{message}</div>}
   </div>;
 };

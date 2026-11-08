@@ -21,3 +21,4 @@ node_modules
 .agent
 .impeccable
 cloudflared.log
+/apps/backend/dist

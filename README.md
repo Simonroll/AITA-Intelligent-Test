@@ -137,19 +137,18 @@ npm.cmd run dev:frontend
 
 Trên Windows có thể dùng `start-all.bat` tại thư mục gốc để kiểm tra Docker/config, khởi động PostgreSQL và Redis, chạy `db:setup`, mở Prisma Studio ở cổng 5555 rồi chạy API/worker/frontend. Lần đầu vẫn phải build runner trước bằng `npm.cmd run sandbox:build`. Đóng cửa sổ Prisma Studio riêng; nhấn **Ctrl+C** trong cửa sổ batch để dừng web/API/worker. `npm.cmd start` vẫn là lệnh trực tiếp nếu không cần Prisma Studio.
 
-## 6. Tài khoản thử nghiệm
+## 6. Tài khoản demo local
 
-Dự án có lệnh seed tài khoản demo local: `npm.cmd run seed:demo`. Các tài khoản trong file roster mẫu gồm 5 sinh viên đã được seed để đăng nhập bằng mật khẩu demo; 5 email còn lại chưa tồn tại và sẽ bị bỏ qua khi import. Mọi tài khoản dùng mật khẩu `AitaTest@123`. Chỉ dùng trong môi trường local/test.
+Chạy `npm.cmd run seed:demo` để tạo/cập nhật tài khoản demo. Trên trang đăng nhập local, chọn một trong ba nút quick login; không cần nhập mật khẩu.
 
-| Email đăng nhập | Mật khẩu | Vai trò được seed | Mục đích |
-| --- | --- | --- | --- |
-| `student.test@fpt.edu.vn` | `AitaTest@123` | `STUDENT` | Nộp bài và xem kết quả |
-| `student.test02@fpt.edu.vn` – `student.test05@fpt.edu.vn` | `AitaTest@123` | `STUDENT` | Tài khoản sẵn có trong file import demo |
-| `lecturer.test@fpt.edu.vn` | `AitaTest@123` | `LECTURER` | Tạo lớp, import roster, tạo bài kiểm tra |
-| `admin.test@fpt.edu.vn` | `AitaTest@123` | `ADMIN` | Kiểm tra quyền quản trị |
+| Email | Vai trò | Mục đích |
+| --- | --- | --- |
+| `student.test@fpt.edu.vn` | `STUDENT` | Nộp bài và xem kết quả |
+| `student.test02@fpt.edu.vn` – `student.test05@fpt.edu.vn` | `STUDENT` | Dữ liệu sinh viên demo/import |
+| `lecturer.test@fpt.edu.vn` | `LECTURER` | Quản lý lớp, roster và bài kiểm tra |
+| `admin.test@fpt.edu.vn` | `ADMIN` | Kiểm tra quyền quản trị |
 
-Chạy `npm.cmd run seed:demo` để tạo/cập nhật các tài khoản và lớp demo. Sau đó chạy `npm.cmd run db:studio` để kiểm tra dữ liệu. Đây là tài khoản local để thử nghiệm, không dùng các thông tin này trên môi trường triển khai.
-
+Tài khoản demo chỉ dùng cho local/test; không bật quick login trên môi trường triển khai.
 ## 7. Google SSO và tài khoản giảng viên
 
 Email/mật khẩu vẫn hoạt động khi `GOOGLE_CLIENT_ID` để trống. Để bật Google:
@@ -157,7 +156,7 @@ Email/mật khẩu vẫn hoạt động khi `GOOGLE_CLIENT_ID` để trống. Đ
 1. Tạo/chọn project trong Google Cloud Console, cấu hình Google Auth Platform và audience **External** nếu dùng Gmail cá nhân. Thêm tài khoản thử nghiệm nếu project yêu cầu test users.
 2. Tạo OAuth client loại **Web application**. Thêm `http://localhost` và `http://localhost:5173` vào **Authorized JavaScript origins**.
 3. Điền Client ID dạng `...apps.googleusercontent.com` vào backend `.env`; khởi động lại API. Luồng GIS credential callback này không cần Client Secret.
-4. Đăng nhập bằng Gmail cá nhân hoặc email Workspace thuộc danh sách được phép. Nếu email đã có tài khoản mật khẩu, nhập mật khẩu hiện tại trên trang login trước khi bấm Google để liên kết.
+4. Đăng nhập bằng Google; tài khoản phải tồn tại và đang hoạt động trong hệ thống.
 
 Backend xác minh ID token và email; `gmail.com` được chấp nhận theo việc sinh viên K19 sử dụng email cá nhân. Quyền học trong lớp vẫn được kiểm tra bằng enrollment. Xem [hướng dẫn Google chính thức](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid) và [chi tiết Auth/import](MILESTONE_2_AUTH_IMPORT_QUEUE.md).
 
@@ -405,3 +404,11 @@ Frontend build nằm ở `apps/frontend/dist`; cấu hình web server phục v�
 - `apps/backend/prisma/schema.prisma`: schema DB; `prisma/migrations/`: migration version hóa.
 - [Syllabus](RBL_Syllabus_AITA_10Weeks.md), [thiết kế DB](DATABASE_DESIGN_3NF.md), [Auth/import/queue](MILESTONE_2_AUTH_IMPORT_QUEUE.md).
 - [Python ast](https://docs.python.org/3.12/library/ast.html), [Roslyn syntax analysis](https://learn.microsoft.com/en-us/dotnet/csharp/roslyn-sdk/get-started/syntax-analysis), [Docker resource constraints](https://docs.docker.com/engine/containers/resource_constraints/), [Docker security](https://docs.docker.com/engine/security/), [bài báo Winnowing gốc](https://www.cs.princeton.edu/courses/archive/spring05/cos598E/bib/p76-schleimer.pdf).
+
+Đăng nhập bằng mật khẩu bị khóa ngoài automated tests. Khi demo local, dùng các nút quick login. Để bật Google:
+
+1. Từ thư mục gốc chạy `npm.cmd run seed:demo` để tạo/cập nhật các tài khoản demo.
+2. Khởi động bằng `start-all.bat`.
+3. Mở `http://localhost:5173/login` rồi bấm **Admin Test**, **Lecturer Test** hoặc **Student Test**. Không cần nhập mật khẩu.
+
+Các nút chỉ hiện trong Vite development mode và dùng endpoint demo riêng. Endpoint chỉ bật bởi launcher local, chỉ cho phép ba tài khoản seed nêu trên và bị tắt khi `NODE_ENV=production`. Đăng nhập bằng email/mật khẩu thông thường vẫn bị khóa ngoài automated tests.

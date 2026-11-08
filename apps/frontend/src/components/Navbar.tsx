@@ -86,8 +86,7 @@ export const Navbar: React.FC = () => {
             </div>
           ) : (
             <div className="app-account-actions">
-              <Link to="/login" className="btn btn-secondary btn-sm">Đăng nhập</Link>
-              <Link to="/register" className="btn btn-primary btn-sm">Đăng ký</Link>
+              <Link to="/login" className="btn btn-primary btn-sm">Đăng nhập</Link>
             </div>
           )}
         </div>

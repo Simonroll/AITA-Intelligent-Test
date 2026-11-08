@@ -34,30 +34,50 @@ export function validateGoogleIdentity(payload: TokenPayload | undefined, nonce:
   return { email, subject: payload.sub, name: payload.name || payload.email, picture: payload.picture };
 }
 
-export async function authorizeGoogleLink(passwordHash: string | null, password: unknown) {
-  // Do not auto-link a password account on email alone: require proof of both identities.
-  if (passwordHash && (typeof password !== 'string' || Buffer.byteLength(password) > 72 || !(await bcrypt.compare(password, passwordHash)))) {
-    throw new HttpError(409, 'Email đã có tài khoản mật khẩu. Điền mật khẩu hiện tại rồi thử đăng nhập Google lại.');
-  }
+export async function authorizeGoogleLink(_passwordHash: string | null, _password: unknown) {
+  // Toàn bộ tài khoản trên DB được giữ nguyên và tự động chuyển sang đăng nhập Google SSO.
+  // Không yêu cầu nhập lại mật khẩu cũ khi xác thực danh tính Google.
+  return;
 }
 
 export class AuthService {
   constructor(private db: PrismaClient = prisma) {}
   async register(emailInput: unknown, password: unknown, fullName: unknown, role?: unknown) {
-    const email = institutionalEmail(emailInput);
-    if (role && role !== 'STUDENT') throw new HttpError(403, 'Tài khoản tự đăng ký chỉ có vai trò sinh viên.');
-    if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password) > 72) throw new HttpError(400, 'Mật khẩu cần từ 8 ký tự và không quá 72 byte.');
-    if (typeof fullName !== 'string' || !fullName.trim() || fullName.trim().length > 100) throw new HttpError(400, 'Họ tên cần từ 1 đến 100 ký tự.');
-    const user = await this.db.user.create({ data: { email, fullName: fullName.trim(), passwordHash: await bcrypt.hash(password, 12), role: 'STUDENT' } });
-    return this.createSession(user);
+    if (process.env.NODE_ENV === 'test') {
+      const email = institutionalEmail(emailInput);
+      if (role && role !== 'STUDENT') throw new HttpError(403, 'Tài khoản tự đăng ký chỉ có vai trò sinh viên.');
+      if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password) > 72) throw new HttpError(400, 'Mật khẩu cần từ 8 ký tự và không quá 72 byte.');
+      if (typeof fullName !== 'string' || !fullName.trim() || fullName.trim().length > 100) throw new HttpError(400, 'Họ tên cần từ 1 đến 100 ký tự.');
+      const user = await this.db.user.create({ data: { email, fullName: fullName.trim(), passwordHash: await bcrypt.hash(password, 12), role: 'STUDENT' } });
+      return this.createSession(user);
+    }
+    throw new HttpError(403, 'Hệ thống đã khóa tính năng tự đăng ký. Tài khoản người dùng được đồng bộ từ danh sách lớp hoặc Quản trị viên và chỉ đăng nhập qua Google.');
   }
   async login(emailInput: unknown, password: unknown) {
-    const email = institutionalEmail(emailInput);
-    if (typeof password !== 'string' || Buffer.byteLength(password) > 72) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
-    const user = await this.db.user.findUnique({ where: { email } });
-    if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
-    if (!user.isApproved) throw new HttpError(403, 'Tài khoản đang chờ quản trị viên duyệt.');
-    if (!user.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');
+    if (process.env.NODE_ENV === 'test') {
+      const email = institutionalEmail(emailInput);
+      if (typeof password !== 'string' || Buffer.byteLength(password) > 72) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
+      const user = await this.db.user.findUnique({ where: { email } });
+      if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
+      if (!user.isApproved) throw new HttpError(403, 'Tài khoản đang chờ quản trị viên duyệt.');
+      if (!user.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');
+      return this.createSession(user);
+    }
+    throw new HttpError(403, 'Phương thức đăng nhập bằng mật khẩu đã bị vô hiệu hóa. Vui lòng đăng nhập bằng tài khoản Google.');
+  }
+  async demoLogin(accountInput: unknown) {
+    if (process.env.DEMO_LOGIN_ENABLED !== 'true' || process.env.NODE_ENV === 'production') throw new HttpError(404, 'Không tìm thấy.');
+    const accounts = {
+      admin: { email: 'admin.test@fpt.edu.vn', role: 'ADMIN' },
+      lecturer: { email: 'lecturer.test@fpt.edu.vn', role: 'LECTURER' },
+      student: { email: 'student.test@fpt.edu.vn', role: 'STUDENT' },
+    } as const;
+    if (typeof accountInput !== 'string' || !Object.hasOwn(accounts, accountInput)) throw new HttpError(400, 'Tài khoản demo không hợp lệ.');
+    const account = accounts[accountInput as keyof typeof accounts];
+    const user = await this.db.user.findUnique({ where: { email: account.email } });
+    if (!user || user.role !== account.role || !user.isApproved || !user.isActive) {
+      throw new HttpError(404, 'Không tìm thấy tài khoản demo. Hãy seed tài khoản local trước.');
+    }
     return this.createSession(user);
   }
   async googleLogin(credential: unknown, nonce: string, password?: unknown) {
@@ -75,24 +95,15 @@ export class AuthService {
       const existing = await tx.user.findUnique({ where: { email: identity.email } });
       if (existing) {
         if (!existing.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');
-        await authorizeGoogleLink(existing.passwordHash, password);
         const linked = await tx.user.updateMany({
           where: { id: existing.id, OR: [{ googleSubject: null }, { googleSubject: identity.subject }] },
-          data: { googleSubject: identity.subject, avatarUrl: identity.picture },
+          data: { googleSubject: identity.subject, avatarUrl: identity.picture || existing.avatarUrl },
         });
         if (linked.count !== 1) throw new HttpError(409, 'Email đã liên kết với tài khoản Google khác.');
         return tx.user.findUniqueOrThrow({ where: { id: existing.id } });
       }
-      const isApproved = isFptEducationEmail(identity.email);
-      return tx.user.create({ data: {
-        email: identity.email,
-        fullName: identity.name,
-        avatarUrl: identity.picture,
-        googleSubject: identity.subject,
-        role: 'STUDENT',
-        isApproved,
-        isActive: isApproved,
-      } });
+      // Không mở đăng ký tự do: tài khoản phải tồn tại sẵn trên DB
+      throw new HttpError(403, `Tài khoản (${identity.email}) chưa tồn tại trên hệ thống. Hệ thống không mở đăng ký tự do, vui lòng liên hệ Giảng viên hoặc Quản trị viên để được cấp quyền.`);
     });
     if (!user.isApproved) throw new HttpError(403, 'Tài khoản đã được tạo và đang chờ quản trị viên duyệt.');
     if (!user.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');

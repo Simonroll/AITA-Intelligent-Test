@@ -159,6 +159,41 @@ export class SubmissionRepository {
     });
   }
 
+  async updateManualGrade(
+    id: string,
+    manualScore: number,
+    lecturerFeedback: string | null,
+    gradedById: string
+  ) {
+    const updated = await prisma.submission.updateMany({
+      where: { id, status: { in: ['COMPLETED', 'COMPILE_ERROR', 'FAILED'] } },
+      data: {
+      manualScore,
+      lecturerFeedback: lecturerFeedback || null,
+      gradedAt: new Date(),
+      gradedById,
+      totalScore: manualScore,
+      },
+    });
+    if (!updated.count) return null;
+    return this.findById(id);
+  }
+
+  async resetForSandbox(id: string) {
+    return prisma.$transaction(async tx => {
+      const claimed = await tx.submission.updateMany({
+        where: { id, status: { in: ['COMPLETED', 'COMPILE_ERROR', 'FAILED'] } },
+        data: {
+          status: 'QUEUED', totalScore: 0, manualScore: null, lecturerFeedback: null,
+          gradedAt: null, gradedById: null, compileMessage: null, startedAt: null, completedAt: null,
+        },
+      });
+      if (!claimed.count) return null;
+      await tx.submissionTestResult.deleteMany({ where: { submissionId: id } });
+      return tx.submission.findUnique({ where: { id } });
+    });
+  }
+
   async saveTestResults(
     results: Array<{
       submissionId: string;

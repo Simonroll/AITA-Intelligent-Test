@@ -5,7 +5,8 @@ import { defaultJobQueue } from '../../infrastructure/queue/bullmq-job-queue';
 import { prisma } from '../../infrastructure/database/prisma';
 import { HttpError } from '../../shared/http';
 import { IJobQueue } from '../../infrastructure/queue/job-queue.interface';
-import { readZip, selectBundle, persistArchive } from '../../infrastructure/storage/submission-archive';
+import fs from 'fs/promises';
+import { readZip, selectBundle, persistArchive, loadBundle, archivePath } from '../../infrastructure/storage/submission-archive';
 
 import { normalizeRepoUrl, teamService } from '../teams/team.service';
 import { SubmissionStatus } from '../../domain/enums';
@@ -481,6 +482,84 @@ export class SubmissionService {
     }
     return (await this.submissionRepo.findLatestForStudent(examId, studentId))?.id;
   }
+  async regradeSubmission(submissionId: string, manualScore: number, lecturerFeedback: string | null, lecturerId: string) {
+    const submission = await this.getSubmission(submissionId);
+    if (!['COMPLETED', 'COMPILE_ERROR', 'FAILED'].includes(submission.status)) {
+      throw new HttpError(409, 'Chỉ có thể chấm thủ công sau khi Sandbox đã hoàn tất.');
+    }
+    const updated = await this.submissionRepo.updateManualGrade(submission.id, manualScore, lecturerFeedback, lecturerId);
+    if (!updated) throw new HttpError(409, 'Bài nộp đang được xử lý lại; hãy chờ Sandbox hoàn tất rồi chấm tiếp.');
+    try {
+      await prisma.auditLog.create({
+        data: {
+          actorId: lecturerId,
+          action: 'SUBMISSION_REGRADE',
+          entityType: 'SUBMISSION',
+          entityId: submission.id,
+          oldValue: String(submission.totalScore),
+          newValue: String(manualScore),
+          reason: lecturerFeedback || 'Giảng viên chấm lại bài thi',
+        },
+      });
+    } catch (auditErr: any) {
+      console.warn('[regradeSubmission] AuditLog error:', auditErr.message);
+    }
+    return updated;
+  }
+
+  async reRunSandbox(submissionId: string) {
+    const submission = await this.getSubmission(submissionId);
+    if (submission.artifactType !== 'ZIP' || !submission.sourceCodeUrl) {
+      throw new HttpError(400, 'Chỉ có thể chạy lại Sandbox với bài nộp ZIP.');
+    }
+    if (['QUEUED', 'RUNNING'].includes(submission.status)) {
+      throw new HttpError(409, 'Bài nộp đang được Sandbox xử lý.');
+    }
+    const reset = await this.submissionRepo.resetForSandbox(submission.id);
+    if (!reset) throw new HttpError(409, 'Bài nộp đã được chạy lại hoặc không ở trạng thái có thể chấm lại.');
+    try {
+      await this.queue.addJob('grading-queue', { submissionId: submission.id }, { jobId: `${submission.id}-rerun-${Date.now()}` });
+    } catch (err: any) {
+      await this.submissionRepo.updateStatus(submission.id, 'FAILED', {
+        completedAt: new Date(),
+        compileMessage: `Không thể đưa bài vào hàng đợi Sandbox: ${err.message}`.slice(0, 4000),
+      });
+      throw new HttpError(503, 'Không thể đưa bài vào hàng đợi Sandbox. Vui lòng thử lại.');
+    }
+    return this.getSubmission(submission.id);
+  }
+
+  async getSourceFilesContent(submission: any): Promise<Array<{ path: string; content: string }>> {
+    if (submission.artifactType === 'ZIP' && submission.sourceCodeUrl) {
+      try {
+        const bundle = await loadBundle(
+          submission.sourceCodeUrl,
+          submission.fileHashSha256,
+          submission.exam.allowedLanguage,
+          submission.entrypoint
+        );
+        return bundle.files.map(f => ({
+          path: f.path,
+          content: f.data.toString('utf-8'),
+        }));
+      } catch (err: any) {
+        try {
+          const bytes = await fs.readFile(archivePath(submission.sourceCodeUrl));
+          const unzipped = await readZip(bytes);
+          const ext = ({ PYTHON: '.py', CSHARP: '.cs', JAVA: '.java' } as Record<string, string>)[submission.exam.allowedLanguage];
+          const matched = ext ? unzipped.filter(f => f.path.endsWith(ext) && !f.path.includes('__MACOSX')) : unzipped;
+          return (matched.length ? matched : unzipped).map(f => ({
+            path: f.path,
+            content: f.data.toString('utf-8'),
+          }));
+        } catch {
+          return [];
+        }
+      }
+    }
+    return [];
+  }
+
   async getSubmissionsByExam(examId: string, studentId?: string) { return this.submissionRepo.findByExamId(examId, studentId); }
 }
 export const submissionService = new SubmissionService();

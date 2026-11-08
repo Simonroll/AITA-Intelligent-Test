@@ -52,7 +52,7 @@ export class DockerSandboxService {
     if (!Number.isInteger(memoryMb) || memoryMb < 64 || memoryMb > 512) throw new Error('Memory limit must be 64..512 MiB.');
     return this.docker.createContainer({ Image: imageFor(language), Cmd: ['sleep', 'infinity'], User: '1000:1000', WorkingDir: '/work', NetworkDisabled: true,
       AttachStdout: true, AttachStderr: true, Tty: false, Labels: { 'aita.sandbox': 'true', 'aita.owner': this.owner },
-      Env: ['HOME=/tmp', 'DOTNET_CLI_HOME=/tmp', 'DOTNET_CLI_TELEMETRY_OPTOUT=1', 'DOTNET_NOLOGO=1', 'DOTNET_EnableDiagnostics=0', 'PYTHONDONTWRITEBYTECODE=1', 'PYTHONUNBUFFERED=1'],
+      Env: ['HOME=/tmp', 'DOTNET_CLI_HOME=/tmp', 'XDG_RUNTIME_DIR=/tmp', 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1', 'DOTNET_CLI_TELEMETRY_OPTOUT=1', 'DOTNET_NOLOGO=1', 'DOTNET_EnableDiagnostics=0', 'PYTHONDONTWRITEBYTECODE=1', 'PYTHONUNBUFFERED=1'],
       HostConfig: { NetworkMode: 'none', ReadonlyRootfs: true, CapDrop: ['ALL'], SecurityOpt: ['no-new-privileges:true'], Init: true,
         Memory: memoryMb * 1024 * 1024, MemorySwap: memoryMb * 1024 * 1024, NanoCpus: 1000000000, PidsLimit: 128,
         Ulimits: [{ Name: 'nofile', Soft: 1024, Hard: 1024 }, { Name: 'core', Soft: 0, Hard: 0 }],

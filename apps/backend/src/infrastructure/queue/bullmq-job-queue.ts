@@ -24,16 +24,17 @@ export class BullMqJobQueue implements IJobQueue {
     }
     return queue;
   }
-  async addJob(queueName: string, payload: { submissionId: string }): Promise<void> {
+  async addJob(queueName: string, payload: { submissionId: string }, options?: { jobId?: string }): Promise<void> {
     const queue = this.queue(queueName);
     let timeout: NodeJS.Timeout | undefined;
     try {
       await Promise.race([
         (async () => {
           await queue.waitUntilReady();
-          const existing = await queue.getJob(payload.submissionId);
+          const jobId = options?.jobId || payload.submissionId;
+          const existing = await queue.getJob(jobId);
           if (existing && await existing.getState() === 'failed') { await existing.retry(); return; }
-          await queue.add('grade-submission', payload, { jobId: payload.submissionId });
+          await queue.add('grade-submission', payload, { jobId });
         })(),
         new Promise<never>((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Redis enqueue timed out.')), 5000); }),
       ]);
