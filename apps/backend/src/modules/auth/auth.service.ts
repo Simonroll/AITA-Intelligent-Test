@@ -54,16 +54,13 @@ export class AuthService {
     throw new HttpError(403, 'Hệ thống đã khóa tính năng tự đăng ký. Tài khoản người dùng được đồng bộ từ danh sách lớp hoặc Quản trị viên và chỉ đăng nhập qua Google.');
   }
   async login(emailInput: unknown, password: unknown) {
-    if (process.env.NODE_ENV === 'test') {
-      const email = institutionalEmail(emailInput);
-      if (typeof password !== 'string' || Buffer.byteLength(password) > 72) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
-      const user = await this.db.user.findUnique({ where: { email } });
-      if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
-      if (!user.isApproved) throw new HttpError(403, 'Tài khoản đang chờ quản trị viên duyệt.');
-      if (!user.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');
-      return this.createSession(user);
-    }
-    throw new HttpError(403, 'Phương thức đăng nhập bằng mật khẩu đã bị vô hiệu hóa. Vui lòng đăng nhập bằng tài khoản Google.');
+    const email = institutionalEmail(emailInput);
+    if (typeof password !== 'string' || Buffer.byteLength(password) > 72) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
+    const user = await this.db.user.findUnique({ where: { email } });
+    if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) throw new HttpError(401, 'Email hoặc mật khẩu không chính xác.');
+    if (!user.isApproved) throw new HttpError(403, 'Tài khoản đang chờ quản trị viên duyệt.');
+    if (!user.isActive) throw new HttpError(403, 'Tài khoản đã bị vô hiệu hóa.');
+    return this.createSession(user);
   }
   async demoLogin(accountInput: unknown) {
     if (process.env.DEMO_LOGIN_ENABLED !== 'true' || process.env.NODE_ENV === 'production') throw new HttpError(404, 'Không tìm thấy.');
