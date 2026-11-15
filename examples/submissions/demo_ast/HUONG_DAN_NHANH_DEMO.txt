@@ -1,0 +1,23 @@
+=== DANH SÁCH BÀI NỘP DEMO AST (JAVA) ===
+
+bainop1.zip -> BÀI GỐC (Bản chuẩn)
+   - Code chuẩn giải thuật Danh sách liên kết đơn.
+   - Dùng làm mốc đối chứng (100%).
+
+bainop2.zip -> ĐẠO VĂN 100% (Đổi tên định danh)
+   - Copy từ bài 1, chỉ đổi tên class, đổi tên biến, thêm comment dài.
+   - AST phát hiện: 100% (HIGH RISK - Cờ đỏ).
+
+bainop3.zip -> ĐẠO VĂN MỨC CAO ~83% (Đảo vòng lặp)
+   - Đổi vòng lặp while sang for, đổi for sang while, thêm hàm phụ isEmpty().
+   - AST phát hiện: 83.12% (HIGH RISK - Cờ đỏ).
+
+bainop4.zip -> CẢI BIÊN THUẬT TOÁN ~68% (Đệ quy + Fast I/O)
+   - Đổi Scanner sang BufferedReader, tính tổng bằng đệ quy.
+   - AST phát hiện: 67.92% (SUSPECTED - Nghi vấn).
+
+bainop5.zip -> LẬP TRÌNH ĐỘC LẬP ~54% (Doubly Linked List)
+   - Tự viết Danh sách liên kết đôi có con trỏ prev/next, Iterator riêng.
+   - AST phát hiện: 54.26% (SAFE - An toàn).
+
+* Lưu ý: Khi nộp bài trên web, ô Entrypoint luôn để là: Main
