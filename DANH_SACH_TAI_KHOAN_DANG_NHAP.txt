@@ -1,0 +1,59 @@
+======================================================================
+               DANH SÁCH TÀI KHOẢN ĐĂNG NHẬP HỆ THỐNG AITA
+======================================================================
+
+* Mật khẩu chung cho tất cả các tài khoản test: AitaTest@123
+* URL Web Local: http://localhost:5173
+* URL Cloudflare Tunnel (nếu truy cập từ xa): https://collected-country-kingston-michael.trycloudflare.com
+
+----------------------------------------------------------------------
+1. TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN)
+----------------------------------------------------------------------
+Email:    admin.test@fpt.edu.vn
+Mật khẩu: AitaTest@123
+Họ tên:   Quản trị viên Test
+Vai trò:  ADMIN (Quản lý người dùng, lớp học, cấu hình hệ thống)
+
+----------------------------------------------------------------------
+2. TÀI KHOẢN GIẢNG VIÊN (LECTURER)
+----------------------------------------------------------------------
+Email:    lecturer.test@fpt.edu.vn
+Mật khẩu: AitaTest@123
+Họ tên:   Giảng viên Test
+Vai trò:  LECTURER (Tạo lớp, tạo đề thi, chấm điểm, phúc khảo, chống đạo văn)
+
+----------------------------------------------------------------------
+3. TÀI KHOẢN SINH VIÊN TEST MỚI (ĐÃ ADD ĐẦY ĐỦ VÀO 7 LỚP HỌC)
+----------------------------------------------------------------------
+[Tài khoản 1]
+Email:    student1.test@fpt.edu.vn
+Mật khẩu: AitaTest@123
+Họ tên:   Sinh viên Test 1
+Vai trò:  STUDENT (Đã tham gia đủ 7 lớp)
+
+[Tài khoản 2]
+Email:    student2.test@fpt.edu.vn
+Mật khẩu: AitaTest@123
+Họ tên:   Sinh viên Test 2
+Vai trò:  STUDENT (Đã tham gia đủ 7 lớp)
+
+----------------------------------------------------------------------
+4. CÁC TÀI KHOẢN SINH VIÊN TEST KHÁC
+----------------------------------------------------------------------
+Email: student.test@fpt.edu.vn    | Mật khẩu: AitaTest@123 | Tên: Nguyễn Văn Nam
+Email: student.test02@fpt.edu.vn  | Mật khẩu: AitaTest@123 | Tên: Trần Thị Minh Anh
+Email: student.test03@fpt.edu.vn  | Mật khẩu: AitaTest@123 | Tên: Lê Hoàng Long
+Email: student.test04@fpt.edu.vn  | Mật khẩu: AitaTest@123 | Tên: Phạm Đức Nam
+Email: student.test05@fpt.edu.vn  | Mật khẩu: AitaTest@123 | Tên: Hoàng Minh Đức
+
+----------------------------------------------------------------------
+5. DANH SÁCH MÃ LỚP DẠNG SỐ (CLASS CODE) ĐỂ THAM GIA LỚP
+----------------------------------------------------------------------
+- Lớp "Múa"                                : 180
+- Lớp "Làm nông"                           : 135
+- Lớp "Vn"                                 : 259
+- Lớp "Lớp Dự Án Phần Mềm SWP391 (FA26)"  : 778
+- Lớp "Lớp Test Import Sinh Viên"          : 811
+- Lớp "Trồng lúa"                          : 668
+- Lớp "Câu cá"                             : 456
+======================================================================
